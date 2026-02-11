@@ -1,5 +1,4 @@
-import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
-import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { AwsClient } from "aws4fetch";
 
 const accountId = process.env.R2_ACCOUNT_ID;
 const accessKeyId = process.env.R2_ACCESS_KEY_ID;
@@ -13,44 +12,44 @@ if (!accountId || !accessKeyId || !secretAccessKey) {
   );
 }
 
-const s3Client =
+const r2BaseUrl =
   accountId && accessKeyId && secretAccessKey
-    ? new S3Client({
-        region: "auto",
-        endpoint: `https://${accountId}.r2.cloudflarestorage.com`,
-        credentials: {
-          accessKeyId,
-          secretAccessKey,
-        },
-      })
+    ? `https://${accountId}.r2.cloudflarestorage.com/${bucketName}`
     : null;
-
-export type UploadResult =
-  | { ok: true; key: string; url: string }
-  | { ok: false; error: string };
 
 /**
  * Generate a presigned URL for direct upload to R2.
- * Frontend uploads to this URL, then we use the returned key for the generation.
+ * Uses aws4fetch (Web API only) - compatible with Cloudflare Workers (no fs).
  */
 export async function createPresignedUploadUrl(
   key: string,
   contentType: string,
   expiresIn = 3600
 ): Promise<{ url: string; key: string } | { error: string }> {
-  if (!s3Client) {
+  if (!r2BaseUrl || !accessKeyId || !secretAccessKey) {
     return { error: "R2 storage not configured" };
   }
 
-  const command = new PutObjectCommand({
-    Bucket: bucketName,
-    Key: key,
-    ContentType: contentType,
+  const client = new AwsClient({
+    accessKeyId,
+    secretAccessKey,
+    service: "s3",
+    region: "auto",
   });
 
+  const objectUrl = `${r2BaseUrl}/${key}?X-Amz-Expires=${expiresIn}`;
+
   try {
-    const url = await getSignedUrl(s3Client, command, { expiresIn });
-    return { url, key };
+    const signedRequest = await client.sign(
+      new Request(objectUrl, {
+        method: "PUT",
+        headers: {
+          "Content-Type": contentType,
+        },
+      }),
+      { aws: { signQuery: true } }
+    );
+    return { url: signedRequest.url.toString(), key };
   } catch (e) {
     console.error("Presigned URL error:", e);
     return {
