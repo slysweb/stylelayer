@@ -1,6 +1,6 @@
 "use server";
 
-import { Signer } from "@volcengine/openapi";
+import { signRequest } from "@/lib/volc-sign";
 
 const JIMENG_ACCESS_KEY = process.env.JIMENG_ACCESS_KEY ?? process.env.VOLC_ACCESSKEY;
 const JIMENG_SECRET_KEY = process.env.JIMENG_SECRET_KEY ?? process.env.VOLC_SECRETKEY;
@@ -27,6 +27,21 @@ export type GenerateResult =
 export async function generateDeconstructedOutfit(
   imageUrl: string,
   layoutStyle: "knolling" | "editorial" = "knolling"
+): Promise<GenerateResult> {
+  try {
+    return await generateDeconstructedOutfitInner(imageUrl, layoutStyle);
+  } catch (e) {
+    console.error("generateDeconstructedOutfit unexpected error:", e);
+    return {
+      ok: false,
+      error: e instanceof Error ? e.message : "Generation failed",
+    };
+  }
+}
+
+async function generateDeconstructedOutfitInner(
+  imageUrl: string,
+  layoutStyle: "knolling" | "editorial"
 ): Promise<GenerateResult> {
   if (!JIMENG_ACCESS_KEY || !JIMENG_SECRET_KEY) {
     return { ok: false, error: "Jimeng AK/SK not configured (JIMENG_ACCESS_KEY, JIMENG_SECRET_KEY)" };
@@ -85,34 +100,32 @@ async function signedFetch(
   body: Record<string, unknown>
 ): Promise<Response> {
   const bodyStr = JSON.stringify(body);
-  const params = { Action: action, Version: "2022-08-31" };
-
-  const requestObj = {
-    region: REGION,
-    method: "POST",
-    params,
-    pathname: "/",
-    headers: {
-      host: "visual.volcengineapi.com",
-      "content-type": "application/json",
-    },
-    body: bodyStr,
+  const params: Record<string, string> = {
+    Action: action,
+    Version: "2022-08-31",
   };
 
-  const signer = new Signer(requestObj, SERVICE);
-  signer.addAuthorization({
-    accessKeyId: JIMENG_ACCESS_KEY!,
-    secretKey: JIMENG_SECRET_KEY!,
-  });
+  const headers = signRequest(
+    {
+      method: "POST",
+      pathname: "/",
+      region: REGION,
+      service: SERVICE,
+      params,
+      headers: {
+        Host: "visual.volcengineapi.com",
+        "Content-Type": "application/json",
+      },
+      body: bodyStr,
+    },
+    {
+      accessKeyId: JIMENG_ACCESS_KEY!,
+      secretKey: JIMENG_SECRET_KEY!,
+    }
+  );
 
   const query = new URLSearchParams(params).toString();
   const url = `${VISUAL_ENDPOINT}/?${query}`;
-
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-    Host: "visual.volcengineapi.com",
-    ...(requestObj.headers as Record<string, string>),
-  };
 
   return fetch(url, {
     method: "POST",
@@ -161,6 +174,9 @@ async function pollJimengTask(taskId: string): Promise<GenerateResult> {
       }
       const b64 = data.data?.binary_data_base64?.[0];
       if (b64) {
+        if (b64.length > 8 * 1024 * 1024) {
+          return { ok: false, error: "Generated image too large, please try again" };
+        }
         return { ok: true, imageUrl: `data:image/png;base64,${b64}` };
       }
       return { ok: false, error: "No image in result" };
