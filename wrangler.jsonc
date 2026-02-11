@@ -3,10 +3,7 @@
   "main": ".open-next/worker.js",
   "name": "long-block-3681",
   "compatibility_date": "2024-12-30",
-  "compatibility_flags": [
-    "nodejs_compat",
-    "global_fetch_strictly_public"
-  ],
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
   "assets": {
     "directory": ".open-next/assets",
     "binding": "ASSETS"
@@ -15,6 +12,12 @@
     {
       "binding": "WORKER_SELF_REFERENCE",
       "service": "long-block-3681"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "R2_BUCKET",
+      "bucket_name": "stylelayer"
     }
   ]
 }

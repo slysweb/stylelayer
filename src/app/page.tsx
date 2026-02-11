@@ -31,13 +31,12 @@ export default function Home() {
       }
 
       try {
+        const formData = new FormData();
+        formData.append("file", file);
+
         const res = await fetch("/api/upload", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            contentType: file.type,
-            filename: file.name,
-          }),
+          body: formData,
         });
         const data = await res.json();
         if (!res.ok) {
@@ -45,19 +44,8 @@ export default function Home() {
           return;
         }
 
-        const { uploadUrl, key } = data;
-        const putRes = await fetch(uploadUrl, {
-          method: "PUT",
-          body: file,
-          headers: { "Content-Type": file.type },
-        });
-        if (!putRes.ok) {
-          setError("Failed to upload file to storage");
-          return;
-        }
-
+        const { key, publicUrl } = data;
         setUploadKey(key);
-        const publicUrl = data.publicUrl ?? key;
         setOriginalImageUrl(publicUrl);
 
         setLoading(true);
