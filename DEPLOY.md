@@ -37,3 +37,23 @@
 - `DATABASE_ID`（如使用 D1）
 
 **重要**：变量应配置在 **Worker → Settings → Variables and Secrets** 中。部署命令已添加 `--keep-vars`，会在每次部署时保留 Dashboard 中设置的变量与密钥，避免被本地配置覆盖。
+
+## R2 CORS 配置（必填）
+
+若使用浏览器直传 R2 预签名 URL，需在 R2 桶上配置 CORS，否则会报 `Access-Control-Allow-Origin` 错误。
+
+### 方式一：Dashboard 配置
+
+1. 打开 [Cloudflare R2](https://dash.cloudflare.com/?to=/:account/r2/overview)
+2. 选择 bucket `stylelayer`
+3. 进入 **Settings** → **CORS Policy** → **Add CORS policy**
+4. 在 **JSON** 中粘贴 `scripts/r2-cors.json` 的内容
+5. 保存
+
+### 方式二：Wrangler CLI
+
+```bash
+npx wrangler r2 bucket cors put stylelayer --file scripts/r2-cors.json
+```
+
+注意：Wrangler 使用的 JSON 格式可能不同，若失败请用方式一。
