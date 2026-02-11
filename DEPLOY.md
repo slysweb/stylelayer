@@ -1,5 +1,11 @@
 # Cloudflare 部署说明
 
+## Worker 名称
+
+`wrangler.jsonc` 中的 `name` 和 `service` 必须与 Cloudflare 控制台中该项目的 Worker 名称一致。当前配置为 `long-block-3681`（与你的 Cloudflare 项目匹配）。
+
+若在 Dashboard 中重命名了 Worker，请同步修改 `wrangler.jsonc` 中的 `name` 和 `services[0].service`。
+
 ## 构建配置
 
 在 Cloudflare Pages / Workers 的 Git 集成中，请将构建配置修改为：
