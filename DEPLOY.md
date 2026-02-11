@@ -34,3 +34,6 @@
 - `R2_PUBLIC_DOMAIN`
 - `JIMENG_API_KEY`
 - `JIMENG_ENDPOINT`
+- `DATABASE_ID`（如使用 D1）
+
+**重要**：变量应配置在 **Worker → Settings → Variables and Secrets** 中。部署命令已添加 `--keep-vars`，会在每次部署时保留 Dashboard 中设置的变量与密钥，避免被本地配置覆盖。
