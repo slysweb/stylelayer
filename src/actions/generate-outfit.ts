@@ -1,11 +1,14 @@
 "use server";
 
-import { getPublicUrl } from "@/lib/s3";
+import { Signer } from "@volcengine/openapi";
 
-const JIMENG_API_KEY = process.env.JIMENG_API_KEY;
-const JIMENG_ENDPOINT =
-  process.env.JIMENG_ENDPOINT ??
-  "https://ark.cn-beijing.volces.com/api/v3/images/generations";
+const JIMENG_ACCESS_KEY = process.env.JIMENG_ACCESS_KEY ?? process.env.VOLC_ACCESSKEY;
+const JIMENG_SECRET_KEY = process.env.JIMENG_SECRET_KEY ?? process.env.VOLC_SECRETKEY;
+
+const VISUAL_ENDPOINT = "https://visual.volcengineapi.com";
+const REQ_KEY = "jimeng_t2i_v40";
+const REGION = "cn-north-1";
+const SERVICE = "cv";
 
 const BASE_PROMPT =
   "Deconstruct the clothing of the main person in the image into jacket, inner wear, pants, and shoes. Arrange them in a knolling layout (OOTD style) on a clean minimalist background.";
@@ -17,15 +20,16 @@ export type GenerateResult =
   | { ok: false; error: string };
 
 /**
- * Call Jimeng (Volcano Engine) image generation API.
+ * Call Jimeng 4.0 (即梦) via Volcano Visual API - CVSync2AsyncSubmitTask + CVSync2AsyncGetResult.
  * Expects imageUrl to be a publicly accessible URL (e.g. from R2 public domain).
+ * Uses AK/SK signing (not Bearer token).
  */
 export async function generateDeconstructedOutfit(
   imageUrl: string,
   layoutStyle: "knolling" | "editorial" = "knolling"
 ): Promise<GenerateResult> {
-  if (!JIMENG_API_KEY) {
-    return { ok: false, error: "Jimeng API key not configured" };
+  if (!JIMENG_ACCESS_KEY || !JIMENG_SECRET_KEY) {
+    return { ok: false, error: "Jimeng AK/SK not configured (JIMENG_ACCESS_KEY, JIMENG_SECRET_KEY)" };
   }
 
   const styleHint =
@@ -35,60 +39,38 @@ export async function generateDeconstructedOutfit(
   const prompt = `${BASE_PROMPT} ${styleHint}${QUALITY_SUFFIX}`;
 
   try {
-    // Volcano Ark image generation: many endpoints accept image URL + prompt.
-    // Adjust body to match actual Jimeng API (e.g. model, image_url field name).
-    const body: Record<string, unknown> = {
-      model: "image-generation", // replace with actual model id from Jimeng docs
+    // 1. Submit task - CVSync2AsyncSubmitTask
+    const submitBody = {
+      req_key: REQ_KEY,
+      image_urls: [imageUrl],
       prompt,
-      image_url: imageUrl,
-      n: 1,
-      size: "1024x1024",
+      size: 2048 * 2048, // 2K default
+      force_single: true,
     };
 
-    const res = await fetch(JIMENG_ENDPOINT, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${JIMENG_API_KEY}`,
-      },
-      body: JSON.stringify(body),
-    });
+    const submitRes = await signedFetch("CVSync2AsyncSubmitTask", submitBody);
+    if (!submitRes.ok) {
+      const text = await submitRes.text();
+      return { ok: false, error: `API error ${submitRes.status}: ${text.slice(0, 300)}` };
+    }
 
-    if (!res.ok) {
-      const text = await res.text();
+    const submitData = (await submitRes.json()) as {
+      code?: number;
+      data?: { task_id?: string };
+      message?: string;
+    };
+
+    if (submitData.code !== 10000 || !submitData.data?.task_id) {
       return {
         ok: false,
-        error: `API error ${res.status}: ${text.slice(0, 200)}`,
+        error: submitData.message ?? "No task_id in submit response",
       };
     }
 
-    const data = (await res.json()) as {
-      data?: Array<{ url?: string; b64_json?: string }>;
-      task_id?: string;
-      status?: string;
-    };
+    const taskId = submitData.data.task_id;
 
-    // If async task, poll for result (implement per Jimeng docs).
-    if (data.task_id) {
-      const pollResult = await pollJimengTask(data.task_id);
-      return pollResult;
-    }
-
-    const image = data.data?.[0];
-    if (image?.url) {
-      return { ok: true, imageUrl: image.url };
-    }
-    if (image?.b64_json) {
-      return {
-        ok: true,
-        imageUrl: `data:image/png;base64,${image.b64_json}`,
-      };
-    }
-
-    return {
-      ok: false,
-      error: "No image in API response",
-    };
+    // 2. Poll for result - CVSync2AsyncGetResult
+    return await pollJimengTask(taskId);
   } catch (e) {
     console.error("Jimeng generate error:", e);
     return {
@@ -98,40 +80,93 @@ export async function generateDeconstructedOutfit(
   }
 }
 
+async function signedFetch(
+  action: string,
+  body: Record<string, unknown>
+): Promise<Response> {
+  const bodyStr = JSON.stringify(body);
+  const params = { Action: action, Version: "2022-08-31" };
+
+  const requestObj = {
+    region: REGION,
+    method: "POST",
+    params,
+    pathname: "/",
+    headers: {
+      host: "visual.volcengineapi.com",
+      "content-type": "application/json",
+    },
+    body: bodyStr,
+  };
+
+  const signer = new Signer(requestObj, SERVICE);
+  signer.addAuthorization({
+    accessKeyId: JIMENG_ACCESS_KEY!,
+    secretKey: JIMENG_SECRET_KEY!,
+  });
+
+  const query = new URLSearchParams(params).toString();
+  const url = `${VISUAL_ENDPOINT}/?${query}`;
+
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    Host: "visual.volcengineapi.com",
+    ...(requestObj.headers as Record<string, string>),
+  };
+
+  return fetch(url, {
+    method: "POST",
+    headers,
+    body: bodyStr,
+  });
+}
+
 async function pollJimengTask(taskId: string): Promise<GenerateResult> {
-  const pollUrl = JIMENG_ENDPOINT.replace(/\/generations$/, `/tasks/${taskId}`);
   const maxAttempts = 60;
   const intervalMs = 2000;
 
   for (let i = 0; i < maxAttempts; i++) {
     await new Promise((r) => setTimeout(r, intervalMs));
 
-    const res = await fetch(pollUrl, {
-      headers: {
-        Authorization: `Bearer ${JIMENG_API_KEY}`,
-      },
-    });
+    const body = {
+      req_key: REQ_KEY,
+      task_id: taskId,
+      req_json: JSON.stringify({ return_url: true }),
+    };
 
+    const res = await signedFetch("CVSync2AsyncGetResult", body);
     if (!res.ok) {
-      return {
-        ok: false,
-        error: `Poll error ${res.status}`,
-      };
+      return { ok: false, error: `Poll error ${res.status}` };
     }
 
     const data = (await res.json()) as {
-      status?: string;
-      result?: { images?: Array<{ url?: string }> };
+      code?: number;
+      data?: {
+        status?: string;
+        image_urls?: string[];
+        binary_data_base64?: string[];
+      };
+      message?: string;
     };
 
-    if (data.status === "Succeeded" && data.result?.images?.[0]?.url) {
-      return { ok: true, imageUrl: data.result.images[0].url };
+    if (data.code !== 10000) {
+      return { ok: false, error: data.message ?? "Task failed" };
     }
-    if (data.status === "Failed") {
-      return {
-        ok: false,
-        error: "Generation task failed",
-      };
+
+    const status = data.data?.status;
+    if (status === "done") {
+      const urls = data.data?.image_urls;
+      if (urls?.[0]) {
+        return { ok: true, imageUrl: urls[0] };
+      }
+      const b64 = data.data?.binary_data_base64?.[0];
+      if (b64) {
+        return { ok: true, imageUrl: `data:image/png;base64,${b64}` };
+      }
+      return { ok: false, error: "No image in result" };
+    }
+    if (status === "not_found" || status === "expired") {
+      return { ok: false, error: `Task ${status}` };
     }
   }
 
