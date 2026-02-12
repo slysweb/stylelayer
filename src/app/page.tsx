@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { Upload, Download, Loader2, ImageIcon } from "lucide-react";
+import { Upload, Download, Loader2, ImageIcon, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { generateDeconstructedOutfit } from "@/actions/generate-outfit";
 import { type ExtractType } from "@/lib/extract-types";
@@ -25,64 +25,71 @@ export default function Home() {
   const [extractType, setExtractType] = useState<ExtractType>("full_body");
   const [customItem, setCustomItem] = useState("");
 
-  const handleFile = useCallback(
-    async (file: File) => {
-      setError(null);
-      setGeneratedImageUrl(null);
+  const handleFile = useCallback(async (file: File) => {
+    setError(null);
+    setGeneratedImageUrl(null);
 
-      if (extractType === "custom" && !customItem.trim()) {
-        setError("Please select an extraction type or enter a custom item (e.g. earrings, necklace)");
+    const allowed = ["image/jpeg", "image/png", "image/webp"];
+    if (!allowed.includes(file.type)) {
+      setError("Please use JPEG, PNG, or WebP format");
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      setError("File must be under 10MB.");
+      return;
+    }
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error ?? "Upload failed");
         return;
       }
 
-      const allowed = ["image/jpeg", "image/png", "image/webp"];
-      if (!allowed.includes(file.type)) {
-        setError("Please use JPEG, PNG, or WebP format");
-        return;
+      const { key, publicUrl } = data;
+      setUploadKey(key);
+      setOriginalImageUrl(publicUrl);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Something went wrong");
+    }
+  }, []);
+
+  const handleGenerate = useCallback(async () => {
+    if (!originalImageUrl) return;
+
+    if (extractType === "custom" && !customItem.trim()) {
+      setError("Please select an extraction type or enter a custom item (e.g. earrings, necklace)");
+      return;
+    }
+
+    setError(null);
+    setLoading(true);
+
+    try {
+      const result = await generateDeconstructedOutfit(
+        originalImageUrl,
+        extractType,
+        extractType === "custom" ? customItem : undefined
+      );
+
+      if (result.ok) {
+        setGeneratedImageUrl(result.imageUrl);
+      } else {
+        setError(result.error);
       }
-      if (file.size > 10 * 1024 * 1024) {
-        setError("File must be under 10MB.");
-        return;
-      }
-
-      try {
-        const formData = new FormData();
-        formData.append("file", file);
-
-        const res = await fetch("/api/upload", {
-          method: "POST",
-          body: formData,
-        });
-        const data = await res.json();
-        if (!res.ok) {
-          setError(data.error ?? "Upload failed");
-          return;
-        }
-
-        const { key, publicUrl } = data;
-        setUploadKey(key);
-        setOriginalImageUrl(publicUrl);
-
-        setLoading(true);
-        const result = await generateDeconstructedOutfit(
-          publicUrl,
-          extractType,
-          extractType === "custom" ? customItem : undefined
-        );
-        setLoading(false);
-
-        if (result.ok) {
-          setGeneratedImageUrl(result.imageUrl);
-        } else {
-          setError(result.error);
-        }
-      } catch (e) {
-        setLoading(false);
-        setError(e instanceof Error ? e.message : "Something went wrong");
-      }
-    },
-    [extractType, customItem]
-  );
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Something went wrong");
+    } finally {
+      setLoading(false);
+    }
+  }, [originalImageUrl, extractType, customItem]);
 
   const onDrop = useCallback(
     (e: React.DragEvent) => {
@@ -184,6 +191,20 @@ export default function Home() {
                 </>
               )}
             </div>
+            {originalImageUrl && (
+              <Button
+                onClick={handleGenerate}
+                disabled={loading}
+                className="w-full"
+              >
+                {loading ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Sparkles className="mr-2 h-4 w-4" />
+                )}
+                Generate
+              </Button>
+            )}
           </section>
 
           {/* Right: Result or placeholder */}
@@ -221,7 +242,7 @@ export default function Home() {
                 </>
               )}
               {!loading && originalImageUrl && !generatedImageUrl && !error && (
-                <p className="text-sm text-stone-500">Upload an image to generate.</p>
+                <p className="text-sm text-stone-500">Click Generate to create your layout.</p>
               )}
             </div>
           </section>
