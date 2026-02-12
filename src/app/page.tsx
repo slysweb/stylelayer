@@ -3,9 +3,20 @@
 import { useCallback, useState } from "react";
 import { Upload, Download, Loader2, ImageIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { generateDeconstructedOutfit } from "@/actions/generate-outfit";
+import {
+  generateDeconstructedOutfit,
+  type ExtractType,
+} from "@/actions/generate-outfit";
 
-type LayoutStyle = "knolling" | "editorial";
+const EXTRACT_OPTIONS: { value: ExtractType; label: string }[] = [
+  { value: "full_body", label: "全身衣服" },
+  { value: "shoes", label: "鞋子" },
+  { value: "bag", label: "包包" },
+  { value: "sofa", label: "沙发" },
+  { value: "daily", label: "日用品" },
+  { value: "accessory", label: "饰品" },
+  { value: "custom", label: "自定义" },
+];
 
 export default function Home() {
   const [originalImageUrl, setOriginalImageUrl] = useState<string | null>(null);
@@ -13,16 +24,22 @@ export default function Home() {
   const [uploadKey, setUploadKey] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [layoutStyle, setLayoutStyle] = useState<LayoutStyle>("knolling");
+  const [extractType, setExtractType] = useState<ExtractType>("full_body");
+  const [customItem, setCustomItem] = useState("");
 
   const handleFile = useCallback(
     async (file: File) => {
       setError(null);
       setGeneratedImageUrl(null);
 
+      if (extractType === "custom" && !customItem.trim()) {
+        setError("请选择提取类型或填写自定义物品（如耳坠、项链等）");
+        return;
+      }
+
       const allowed = ["image/jpeg", "image/png", "image/webp"];
       if (!allowed.includes(file.type)) {
-        setError("Please use JPEG, PNG, or WebP.");
+        setError("请使用 JPEG、PNG 或 WebP 格式");
         return;
       }
       if (file.size > 10 * 1024 * 1024) {
@@ -49,7 +66,11 @@ export default function Home() {
         setOriginalImageUrl(publicUrl);
 
         setLoading(true);
-        const result = await generateDeconstructedOutfit(publicUrl, layoutStyle);
+        const result = await generateDeconstructedOutfit(
+          publicUrl,
+          extractType,
+          extractType === "custom" ? customItem : undefined
+        );
         setLoading(false);
 
         if (result.ok) {
@@ -62,7 +83,7 @@ export default function Home() {
         setError(e instanceof Error ? e.message : "Something went wrong");
       }
     },
-    [layoutStyle]
+    [extractType, customItem]
   );
 
   const onDrop = useCallback(
@@ -104,22 +125,32 @@ export default function Home() {
       </header>
 
       <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
-        <div className="mb-6 flex flex-wrap gap-2">
-          <span className="text-sm text-stone-500">Layout:</span>
-          <Button
-            variant={layoutStyle === "knolling" ? "default" : "outline"}
-            size="sm"
-            onClick={() => setLayoutStyle("knolling")}
-          >
-            Knolling
-          </Button>
-          <Button
-            variant={layoutStyle === "editorial" ? "default" : "outline"}
-            size="sm"
-            onClick={() => setLayoutStyle("editorial")}
-          >
-            Editorial
-          </Button>
+        <div className="mb-6 space-y-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-sm text-stone-500">提取类型：</span>
+            {EXTRACT_OPTIONS.map((opt) => (
+              <Button
+                key={opt.value}
+                variant={extractType === opt.value ? "default" : "outline"}
+                size="sm"
+                onClick={() => setExtractType(opt.value)}
+              >
+                {opt.label}
+              </Button>
+            ))}
+          </div>
+          {extractType === "custom" && (
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-stone-500">自定义物品：</span>
+              <input
+                type="text"
+                placeholder="如：耳坠、项链、手表..."
+                value={customItem}
+                onChange={(e) => setCustomItem(e.target.value)}
+                className="rounded-md border border-stone-300 px-3 py-2 text-sm ring-stone-200 focus:border-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-200"
+              />
+            </div>
+          )}
         </div>
 
         <div className="grid gap-6 lg:grid-cols-2">

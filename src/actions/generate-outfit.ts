@@ -6,30 +6,58 @@ const JIMENG_ACCESS_KEY = process.env.JIMENG_ACCESS_KEY ?? process.env.VOLC_ACCE
 const JIMENG_SECRET_KEY = process.env.JIMENG_SECRET_KEY ?? process.env.VOLC_SECRETKEY;
 
 const VISUAL_ENDPOINT = "https://visual.volcengineapi.com";
-const REQ_KEY = "jimeng_t2i_v40";
+const EXTRACT_REQ_KEY = "jimeng_i2i_extract_tiled_images";
 const REGION = "cn-north-1";
 const SERVICE = "cv";
 
-const BASE_PROMPT =
-  "Deconstruct the clothing of the main person in the image into jacket, inner wear, pants, and shoes. Arrange them in a knolling layout (OOTD style) on a clean minimalist background.";
-const QUALITY_SUFFIX =
-  " High quality fashion photography, soft shadows, studio lighting, highly detailed textures, realistic fabric, 4k resolution, clean edges, minimalist background.";
+/** 预设提取类型对应的 edit_prompt（ API 文档要求） */
+export const EXTRACT_PROMPTS = {
+  full_body:
+    "提取出图片中的衣服、帽子、鞋子和包，生成一张平铺图，背景为纯白色。",
+  shoes: "提取出图片中的一双鞋子，生成一张正45度图，背景为纯白色。",
+  bag: "提取出图片中的完整的包包和包带，正视图，背景为纯白色。",
+  sofa: "提取出图片中的完整的沙发，生成一张正视图，背景为纯白色。",
+  daily: "提取出图片中的日用品，生成一张正视图，背景为纯白色。",
+  accessory: "提取出图片中的饰品，生成一张正视图，背景为纯白色。",
+} as const;
+
+export type ExtractType = keyof typeof EXTRACT_PROMPTS | "custom";
 
 export type GenerateResult =
   | { ok: true; imageUrl: string }
   | { ok: false; error: string };
 
 /**
- * Call Jimeng 4.0 (即梦) via Volcano Visual API - CVSync2AsyncSubmitTask + CVSync2AsyncGetResult.
+ * 根据提取类型和自定义内容生成 edit_prompt
+ */
+function buildEditPrompt(
+  extractType: ExtractType,
+  customItem?: string
+): string {
+  if (extractType === "custom" && customItem?.trim()) {
+    return `提取出图片中的${customItem.trim()}，生成一张正视图，背景为纯白色。`;
+  }
+  if (extractType in EXTRACT_PROMPTS) {
+    return EXTRACT_PROMPTS[extractType as keyof typeof EXTRACT_PROMPTS];
+  }
+  return EXTRACT_PROMPTS.full_body;
+}
+
+/**
+ * Call 即梦商品提取 API (jimeng_i2i_extract_tiled_images) via Volcano Visual API.
  * Expects imageUrl to be a publicly accessible URL (e.g. from R2 public domain).
- * Uses AK/SK signing (not Bearer token).
  */
 export async function generateDeconstructedOutfit(
   imageUrl: string,
-  layoutStyle: "knolling" | "editorial" = "knolling"
+  extractType: ExtractType = "full_body",
+  customItem?: string
 ): Promise<GenerateResult> {
   try {
-    return await generateDeconstructedOutfitInner(imageUrl, layoutStyle);
+    return await generateDeconstructedOutfitInner(
+      imageUrl,
+      extractType,
+      customItem
+    );
   } catch (e) {
     console.error("generateDeconstructedOutfit unexpected error:", e);
     return {
@@ -41,26 +69,23 @@ export async function generateDeconstructedOutfit(
 
 async function generateDeconstructedOutfitInner(
   imageUrl: string,
-  layoutStyle: "knolling" | "editorial"
+  extractType: ExtractType,
+  customItem?: string
 ): Promise<GenerateResult> {
   if (!JIMENG_ACCESS_KEY || !JIMENG_SECRET_KEY) {
-    return { ok: false, error: "Jimeng AK/SK not configured (JIMENG_ACCESS_KEY, JIMENG_SECRET_KEY)" };
+    return { ok: false, error: "Jimeng AK/SK 未配置 (JIMENG_ACCESS_KEY, JIMENG_SECRET_KEY)" };
   }
 
-  const styleHint =
-    layoutStyle === "editorial"
-      ? "Editorial magazine style layout."
-      : "Knolling flat-lay style.";
-  const prompt = `${BASE_PROMPT} ${styleHint}${QUALITY_SUFFIX}`;
+  const editPrompt = buildEditPrompt(extractType, customItem);
 
   try {
-    // 1. Submit task - CVSync2AsyncSubmitTask
+    // 1. 提交任务 - CVSync2AsyncSubmitTask
     const submitBody = {
-      req_key: REQ_KEY,
+      req_key: EXTRACT_REQ_KEY,
       image_urls: [imageUrl],
-      prompt,
-      size: 2048 * 2048, // 2K default
-      force_single: true,
+      edit_prompt: editPrompt,
+      width: 2048,
+      height: 2048,
     };
 
     const submitRes = await signedFetch("CVSync2AsyncSubmitTask", submitBody);
@@ -142,7 +167,7 @@ async function pollJimengTask(taskId: string): Promise<GenerateResult> {
     await new Promise((r) => setTimeout(r, intervalMs));
 
     const body = {
-      req_key: REQ_KEY,
+      req_key: EXTRACT_REQ_KEY,
       task_id: taskId,
       req_json: JSON.stringify({ return_url: true }),
     };
