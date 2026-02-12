@@ -4,20 +4,15 @@
   "name": "long-block-3681",
   "compatibility_date": "2024-12-30",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
-  "assets": {
-    "directory": ".open-next/assets",
-    "binding": "ASSETS"
-  },
-  "services": [
+  "assets": { "directory": ".open-next/assets", "binding": "ASSETS" },
+  "services": [{ "binding": "WORKER_SELF_REFERENCE", "service": "long-block-3681" }],
+  "r2_buckets": [{ "binding": "R2_BUCKET", "bucket_name": "stylelayer" }],
+  "d1_databases": [
     {
-      "binding": "WORKER_SELF_REFERENCE",
-      "service": "long-block-3681"
-    }
-  ],
-  "r2_buckets": [
-    {
-      "binding": "R2_BUCKET",
-      "bucket_name": "stylelayer"
+      "binding": "DB",
+      "database_name": "stylelayer-db",
+      "database_id": "ea8f7e0d-9a9e-4701-bf6b-f2d320545570",
+      "migrations_dir": "migrations"
     }
   ]
 }

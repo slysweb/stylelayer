@@ -7,6 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "db:migrate": "wrangler d1 migrations apply stylelayer-db",
+    "db:migrate:local": "wrangler d1 migrations apply stylelayer-db --local",
     "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
     "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy -- --keep-vars"
   },

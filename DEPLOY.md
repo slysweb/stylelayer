@@ -46,9 +46,28 @@
 - `R2_PUBLIC_DOMAIN`
 - `JIMENG_ACCESS_KEY`
 - `JIMENG_SECRET_KEY`
-- `DATABASE_ID`（如使用 D1）
 
 **重要**：变量应配置在 **Cloudflare Pages / Worker → Settings → Environment variables** 中。
+
+## D1 数据库
+
+D1 通过 `wrangler.jsonc` 中的 `d1_databases` 绑定，binding 名为 `DB`。
+
+**首次部署或新建 D1 后**，需执行迁移：
+
+```bash
+# 远程（生产）数据库
+npm run db:migrate
+
+# 本地开发
+npm run db:migrate:local
+```
+
+**表结构**（`migrations/0001_initial_schema.sql`）：
+
+- `users` — 用户表（google_id, email, plan, credits_balance）
+- `generations` — 生成任务表（user_id, type, original_url, result_url, status, prompt_used, credits_spent）
+- `credit_logs` — 积分流水表（user_id, amount, action_type, description）
 
 ## R2 配置
 
