@@ -27,16 +27,26 @@
 
 在 Cloudflare 控制台的项目设置中配置以下环境变量：
 
+**Clerk（构建时必须）** — 在 Cloudflare Pages 的 **Build** 环境变量中配置，否则构建会失败：
+
+- `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` — 从 [Clerk Dashboard](https://dashboard.clerk.com/last-active?path=api-keys) 获取
+- `CLERK_SECRET_KEY` — 同上
+
+**R2 / 业务**：
+
 - `R2_ACCOUNT_ID`
 - `R2_ACCESS_KEY_ID`
 - `R2_SECRET_ACCESS_KEY`
 - `R2_BUCKET_NAME`
 - `R2_PUBLIC_DOMAIN`
-- `JIMENG_API_KEY`
-- `JIMENG_ENDPOINT`
+- `JIMENG_ACCESS_KEY`
+- `JIMENG_SECRET_KEY`
 - `DATABASE_ID`（如使用 D1）
 
-**重要**：变量应配置在 **Worker → Settings → Variables and Secrets** 中。部署命令已添加 `--keep-vars`，会在每次部署时保留 Dashboard 中设置的变量与密钥，避免被本地配置覆盖。
+**重要**：
+
+1. **Cloudflare Pages**：在 **Settings → Environment variables** 中配置，将 Clerk 相关变量作用于 **Production** 和 **Preview**。
+2. **Worker**：变量应配置在 **Worker → Settings → Variables and Secrets** 中。部署命令已添加 `--keep-vars`，会在每次部署时保留 Dashboard 中设置的变量与密钥。
 
 ## R2 配置
 
