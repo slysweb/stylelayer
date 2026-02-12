@@ -3,19 +3,17 @@
 import { useCallback, useState } from "react";
 import { Upload, Download, Loader2, ImageIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  generateDeconstructedOutfit,
-  type ExtractType,
-} from "@/actions/generate-outfit";
+import { generateDeconstructedOutfit } from "@/actions/generate-outfit";
+import { type ExtractType } from "@/lib/extract-types";
 
 const EXTRACT_OPTIONS: { value: ExtractType; label: string }[] = [
-  { value: "full_body", label: "全身衣服" },
-  { value: "shoes", label: "鞋子" },
-  { value: "bag", label: "包包" },
-  { value: "sofa", label: "沙发" },
-  { value: "daily", label: "日用品" },
-  { value: "accessory", label: "饰品" },
-  { value: "custom", label: "自定义" },
+  { value: "full_body", label: "Full outfit" },
+  { value: "shoes", label: "Shoes" },
+  { value: "bag", label: "Bag" },
+  { value: "sofa", label: "Sofa" },
+  { value: "daily", label: "Daily items" },
+  { value: "accessory", label: "Accessories" },
+  { value: "custom", label: "Custom" },
 ];
 
 export default function Home() {
@@ -33,13 +31,13 @@ export default function Home() {
       setGeneratedImageUrl(null);
 
       if (extractType === "custom" && !customItem.trim()) {
-        setError("请选择提取类型或填写自定义物品（如耳坠、项链等）");
+        setError("Please select an extraction type or enter a custom item (e.g. earrings, necklace)");
         return;
       }
 
       const allowed = ["image/jpeg", "image/png", "image/webp"];
       if (!allowed.includes(file.type)) {
-        setError("请使用 JPEG、PNG 或 WebP 格式");
+        setError("Please use JPEG, PNG, or WebP format");
         return;
       }
       if (file.size > 10 * 1024 * 1024) {
@@ -127,7 +125,7 @@ export default function Home() {
       <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
         <div className="mb-6 space-y-3">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-sm text-stone-500">提取类型：</span>
+            <span className="text-sm text-stone-500">Extract type:</span>
             {EXTRACT_OPTIONS.map((opt) => (
               <Button
                 key={opt.value}
@@ -141,10 +139,10 @@ export default function Home() {
           </div>
           {extractType === "custom" && (
             <div className="flex items-center gap-2">
-              <span className="text-sm text-stone-500">自定义物品：</span>
+              <span className="text-sm text-stone-500">Custom item:</span>
               <input
                 type="text"
-                placeholder="如：耳坠、项链、手表..."
+                placeholder="e.g. earrings, necklace, watch..."
                 value={customItem}
                 onChange={(e) => setCustomItem(e.target.value)}
                 className="rounded-md border border-stone-300 px-3 py-2 text-sm ring-stone-200 focus:border-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-200"

@@ -1,6 +1,7 @@
 "use server";
 
 import { signRequest } from "@/lib/volc-sign";
+import { EXTRACT_PROMPTS, type ExtractType } from "@/lib/extract-types";
 
 const JIMENG_ACCESS_KEY = process.env.JIMENG_ACCESS_KEY ?? process.env.VOLC_ACCESSKEY;
 const JIMENG_SECRET_KEY = process.env.JIMENG_SECRET_KEY ?? process.env.VOLC_SECRETKEY;
@@ -10,18 +11,6 @@ const EXTRACT_REQ_KEY = "jimeng_i2i_extract_tiled_images";
 const REGION = "cn-north-1";
 const SERVICE = "cv";
 
-/** 预设提取类型对应的 edit_prompt（ API 文档要求） */
-export const EXTRACT_PROMPTS = {
-  full_body:
-    "提取出图片中的衣服、帽子、鞋子和包，生成一张平铺图，背景为纯白色。",
-  shoes: "提取出图片中的一双鞋子，生成一张正45度图，背景为纯白色。",
-  bag: "提取出图片中的完整的包包和包带，正视图，背景为纯白色。",
-  sofa: "提取出图片中的完整的沙发，生成一张正视图，背景为纯白色。",
-  daily: "提取出图片中的日用品，生成一张正视图，背景为纯白色。",
-  accessory: "提取出图片中的饰品，生成一张正视图，背景为纯白色。",
-} as const;
-
-export type ExtractType = keyof typeof EXTRACT_PROMPTS | "custom";
 
 export type GenerateResult =
   | { ok: true; imageUrl: string }
@@ -53,17 +42,16 @@ export async function generateDeconstructedOutfit(
   customItem?: string
 ): Promise<GenerateResult> {
   try {
-    return await generateDeconstructedOutfitInner(
+    const result = await generateDeconstructedOutfitInner(
       imageUrl,
       extractType,
       customItem
     );
+    return result;
   } catch (e) {
-    console.error("generateDeconstructedOutfit unexpected error:", e);
-    return {
-      ok: false,
-      error: e instanceof Error ? e.message : "Generation failed",
-    };
+    console.error("generateDeconstructedOutfit error:", e);
+    const errMsg = e instanceof Error ? e.message : String(e);
+    return { ok: false, error: errMsg || "Generation failed" };
   }
 }
 
@@ -73,32 +61,35 @@ async function generateDeconstructedOutfitInner(
   customItem?: string
 ): Promise<GenerateResult> {
   if (!JIMENG_ACCESS_KEY || !JIMENG_SECRET_KEY) {
-    return { ok: false, error: "Jimeng AK/SK 未配置 (JIMENG_ACCESS_KEY, JIMENG_SECRET_KEY)" };
+    return { ok: false, error: "Jimeng AK/SK not configured (JIMENG_ACCESS_KEY, JIMENG_SECRET_KEY)" };
   }
 
   const editPrompt = buildEditPrompt(extractType, customItem);
 
   try {
     // 1. 提交任务 - CVSync2AsyncSubmitTask
+    // 文档示例用 image_edit_prompt，参数表用 edit_prompt，两参数都传以兼容
     const submitBody = {
       req_key: EXTRACT_REQ_KEY,
       image_urls: [imageUrl],
       edit_prompt: editPrompt,
+      image_edit_prompt: editPrompt,
       width: 2048,
       height: 2048,
     };
 
     const submitRes = await signedFetch("CVSync2AsyncSubmitTask", submitBody);
+    const submitText = await submitRes.text();
     if (!submitRes.ok) {
-      const text = await submitRes.text();
-      return { ok: false, error: `API error ${submitRes.status}: ${text.slice(0, 300)}` };
+      return { ok: false, error: `API error ${submitRes.status}: ${submitText.slice(0, 300)}` };
     }
 
-    const submitData = (await submitRes.json()) as {
-      code?: number;
-      data?: { task_id?: string };
-      message?: string;
-    };
+    let submitData: { code?: number; data?: { task_id?: string }; message?: string };
+    try {
+      submitData = JSON.parse(submitText) as typeof submitData;
+    } catch {
+      return { ok: false, error: "Invalid API response" };
+    }
 
     if (submitData.code !== 10000 || !submitData.data?.task_id) {
       return {
