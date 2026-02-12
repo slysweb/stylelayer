@@ -1,12 +1,12 @@
 import Link from "next/link";
-import { auth } from "@clerk/nextjs/server";
+import { getSession } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { Navigation } from "@/components/navigation";
 
 export default async function HomePage() {
-  const { userId } = await auth();
+  const user = await getSession();
 
-  if (userId) {
+  if (user) {
     redirect("/generate");
   }
 
@@ -37,7 +37,7 @@ export default async function HomePage() {
             Get started
           </Link>
           <p className="mt-4 text-sm text-stone-400">
-            Sign in with Google or Apple
+            Sign in with Google
           </p>
         </div>
       </main>

@@ -1,14 +1,38 @@
 "use client";
 
 import Link from "next/link";
-import { UserButton, useUser } from "@clerk/nextjs";
+import { useEffect, useState } from "react";
+import Image from "next/image";
+
+type SessionUser = {
+  id: string;
+  email: string;
+  name: string;
+  picture?: string;
+};
 
 export function Navigation() {
-  const { isSignedIn } = useUser();
+  const [user, setUser] = useState<SessionUser | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/auth/session")
+      .then((res) => res.json())
+      .then((data) => {
+        setUser(data.user);
+      })
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="h-9 w-9 animate-pulse rounded-full bg-stone-200" />
+    );
+  }
 
   return (
     <nav className="flex items-center gap-4">
-      {isSignedIn ? (
+      {user ? (
         <>
           <Link
             href="/dashboard"
@@ -22,14 +46,25 @@ export function Navigation() {
           >
             Generate
           </Link>
-          <UserButton
-            afterSignOutUrl="/"
-            appearance={{
-              elements: {
-                avatarBox: "h-9 w-9 ring-0",
-              },
-            }}
-          />
+          {user.picture ? (
+            <Image
+              src={user.picture}
+              alt={user.name}
+              width={36}
+              height={36}
+              className="h-9 w-9 rounded-full"
+            />
+          ) : (
+            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-stone-200 text-sm font-medium text-stone-600">
+              {user.name?.[0] ?? user.email?.[0] ?? "?"}
+            </span>
+          )}
+          <Link
+            href="/api/auth/signout"
+            className="text-sm font-medium text-stone-600 transition-colors hover:text-stone-900"
+          >
+            Sign out
+          </Link>
         </>
       ) : (
         <Link

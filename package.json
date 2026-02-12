@@ -11,7 +11,6 @@
     "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy -- --keep-vars"
   },
   "dependencies": {
-    "@clerk/nextjs": "^6.37.3",
     "@radix-ui/react-slot": "^1.1.0",
     "@volcengine/openapi": "^1.35.0",
     "aws4fetch": "^1.0.20",

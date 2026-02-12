@@ -27,10 +27,15 @@
 
 在 Cloudflare 控制台的项目设置中配置以下环境变量：
 
-**Clerk（构建时必须）** — 在 Cloudflare Pages 的 **Build** 环境变量中配置，否则构建会失败：
+**Google OAuth / 会话**：
 
-- `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` — 从 [Clerk Dashboard](https://dashboard.clerk.com/last-active?path=api-keys) 获取
-- `CLERK_SECRET_KEY` — 同上
+- `GOOGLE_CLIENT_ID` — 从 [Google Cloud Console](https://console.cloud.google.com/apis/credentials) 创建 OAuth 2.0 客户端 ID
+- `GOOGLE_CLIENT_SECRET` — 同上
+- `AUTH_SECRET` — 会话签名密钥（至少 32 字符，可用 `openssl rand -base64 32` 生成）
+
+**在 Google Cloud Console 配置**：**APIs & Services** → **Credentials** → OAuth 2.0 客户端 → 添加授权重定向 URI：
+- 开发：`http://localhost:3000/api/auth/callback`
+- 生产：`https://你的域名/api/auth/callback`
 
 **R2 / 业务**：
 
@@ -43,10 +48,7 @@
 - `JIMENG_SECRET_KEY`
 - `DATABASE_ID`（如使用 D1）
 
-**重要**：
-
-1. **Cloudflare Pages**：在 **Settings → Environment variables** 中配置，将 Clerk 相关变量作用于 **Production** 和 **Preview**。
-2. **Worker**：变量应配置在 **Worker → Settings → Variables and Secrets** 中。部署命令已添加 `--keep-vars`，会在每次部署时保留 Dashboard 中设置的变量与密钥。
+**重要**：变量应配置在 **Cloudflare Pages / Worker → Settings → Environment variables** 中。
 
 ## R2 配置
 

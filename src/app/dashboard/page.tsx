@@ -1,9 +1,9 @@
-import { auth } from "@clerk/nextjs/server";
+import { getSession } from "@/lib/auth";
 import Link from "next/link";
 import { Navigation } from "@/components/navigation";
 
 export default async function DashboardPage() {
-  const { userId } = await auth();
+  const user = await getSession();
 
   return (
     <div className="min-h-screen bg-[#fafaf9] text-stone-900">
@@ -20,7 +20,7 @@ export default async function DashboardPage() {
         <div className="rounded-xl border border-stone-200 bg-white p-8">
           <h2 className="text-xl font-semibold text-stone-900">Dashboard</h2>
           <p className="mt-2 text-sm text-stone-500">
-            Welcome{userId ? " back" : ""}. Your generated layouts will appear here.
+            Welcome{user ? ` back, ${user.name}` : ""}. Your generated layouts will appear here.
           </p>
           <Link
             href="/generate"
