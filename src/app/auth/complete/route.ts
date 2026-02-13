@@ -1,9 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import {
-  verifyHandoffToken,
-  SESSION_COOKIE,
-  getSessionCookieOptions,
-} from "@/lib/auth";
+import { verifyHandoffToken } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -26,26 +22,24 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(new URL("/sign-in?error=session_expired", request.url));
   }
 
-  // session 已在 callback 中创建，此处直接使用 sessionId 设置 cookie
-  const sessionToken = handoff.sessionId;
-  const targetUrl = new URL("/", request.url);
-  const opts = getSessionCookieOptions(request.url);
+  const sessionId = handoff.sessionId;
+  const setSessionUrl = new URL("/api/auth/set-session", request.url);
 
-  // 200 + meta refresh：延迟 1 秒让浏览器完整处理 Set-Cookie 后再跳转
-  const html = `<!DOCTYPE html><html><head><meta http-equiv="refresh" content="1;url=${targetUrl.toString()}"></head><body>Redirecting...</body></html>`;
+  // 使用 form POST 到 set-session，由该接口设置 cookie 并 302 重定向
+  // 某些环境下 POST 响应的 Set-Cookie 比 200+meta 更可靠
+  const html = `<!DOCTYPE html><html><head><title>Signing in...</title></head><body>
+    <p>Signing in...</p>
+    <form id="f" method="POST" action="${setSessionUrl.toString()}">
+      <input type="hidden" name="session_id" value="${sessionId}" />
+    </form>
+    <script>document.getElementById("f").submit();</script>
+  </body></html>`;
   const response = new NextResponse(html, {
     status: 200,
-    headers: { "Content-Type": "text/html; charset=utf-8" },
+    headers: {
+      "Content-Type": "text/html; charset=utf-8",
+      "Cache-Control": "no-store, no-cache, must-revalidate",
+    },
   });
-  // 手动构造 Set-Cookie，确保 Cloudflare 正确传递
-  const cookieParts = [
-    `${SESSION_COOKIE}=${sessionToken}`,
-    `Path=${opts.path}`,
-    `Max-Age=${opts.maxAge}`,
-    `HttpOnly`,
-    `SameSite=Lax`,
-  ];
-  if (opts.secure) cookieParts.push("Secure");
-  response.headers.set("Set-Cookie", cookieParts.join("; "));
   return response;
 }

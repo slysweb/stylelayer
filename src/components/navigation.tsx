@@ -17,7 +17,7 @@ export function Navigation() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch("/api/auth/session")
+    fetch("/api/auth/session", { credentials: "include" })
       .then((res) => res.json())
       .then((data) => {
         setUser(data.user);
