@@ -111,25 +111,26 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // 返回 HTML 页面，显示调试信息，设置 cookie，然后 JS 跳转
-    const debugInfo = `steps=${steps.join(",")}&type=${sessionType}&len=${sessionToken.length}`;
-    const targetUrl = new URL(`/?${debugInfo}`, request.url).toString();
-    const html = `<!DOCTYPE html><html><head><title>Signing in...</title></head><body>
-      <p>Signing in... (${steps.join(" → ")})</p>
-      <p>Session type: ${sessionType}, length: ${sessionToken.length}</p>
-      <script>setTimeout(function(){window.location.href="${targetUrl}"},1000);</script>
-    </body></html>`;
-
-    const response = new NextResponse(html, {
-      status: 200,
-      headers: {
-        "Content-Type": "text/html; charset=utf-8",
-        "Cache-Control": "no-store, no-cache, must-revalidate, private",
-      },
+    // 返回 JSON（和 test-cookie 完全一样的模式），不跳转，先验证 cookie 是否能设置
+    const response = NextResponse.json({
+      ok: true,
+      steps,
+      sessionType,
+      sessionTokenLength: sessionToken.length,
+      message: "Login successful. Check cookies in DevTools. Then go to /api/auth/debug",
     });
+    // 设置 session cookie
     response.cookies.set(SESSION_COOKIE, sessionToken, {
       path: "/",
       maxAge: SESSION_MAX_AGE,
+      httpOnly: true,
+      secure: request.url.startsWith("https://"),
+      sameSite: "lax",
+    });
+    // 同时设置一个简单的测试 cookie 作为对比
+    response.cookies.set("cb_test", "from_callback_" + Date.now(), {
+      path: "/",
+      maxAge: 3600,
       httpOnly: true,
       secure: request.url.startsWith("https://"),
       sameSite: "lax",
