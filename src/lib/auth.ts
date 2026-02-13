@@ -1,7 +1,8 @@
 import { cookies } from "next/headers";
 
 export const SESSION_COOKIE = "stylelayer_session";
-const SESSION_MAX_AGE = 60 * 60 * 24 * 7; // 7 days
+export const SESSION_MAX_AGE = 60 * 60 * 24 * 7; // 7 days
+const HANDOFF_MAX_AGE = 60; // 1 min for OAuth redirect handoff
 
 export const SESSION_COOKIE_OPTIONS = {
   httpOnly: true,
@@ -27,17 +28,29 @@ async function getSecret(): Promise<string> {
 }
 
 function base64UrlEncode(data: Uint8Array): string {
-  return Buffer.from(data)
-    .toString("base64")
-    .replace(/\+/g, "-")
-    .replace(/\//g, "_")
-    .replace(/=+$/, "");
+  let binary = "";
+  for (let i = 0; i < data.length; i++) {
+    binary += String.fromCharCode(data[i]);
+  }
+  const base64 =
+    typeof Buffer !== "undefined"
+      ? Buffer.from(data).toString("base64")
+      : btoa(binary);
+  return base64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 
 function base64UrlDecode(str: string): Uint8Array {
   const padding = "=".repeat((4 - (str.length % 4)) % 4);
   const base64 = (str + padding).replace(/-/g, "+").replace(/_/g, "/");
-  return new Uint8Array(Buffer.from(base64, "base64"));
+  if (typeof Buffer !== "undefined") {
+    return new Uint8Array(Buffer.from(base64, "base64"));
+  }
+  const raw = atob(base64);
+  const arr = new Uint8Array(raw.length);
+  for (let i = 0; i < raw.length; i++) {
+    arr[i] = raw.charCodeAt(i);
+  }
+  return arr;
 }
 
 async function sign(msg: string, secret: string): Promise<string> {
@@ -73,11 +86,49 @@ export async function createSession(user: SessionUser): Promise<string> {
   return `${payloadB64}.${signature}`;
 }
 
-export async function getSession(): Promise<SessionUser | null> {
-  const cookieStore = await cookies();
-  const token = cookieStore.get(SESSION_COOKIE)?.value;
-  if (!token) return null;
+/** 短期 handoff token，用于 OAuth 回调后设置 cookie（避免 redirect 时 cookie 丢失） */
+export async function createHandoffToken(user: SessionUser): Promise<string> {
+  const secret = await getSecret();
+  const payload = {
+    user,
+    exp: Math.floor(Date.now() / 1000) + HANDOFF_MAX_AGE,
+    handoff: true,
+  };
+  const payloadStr = JSON.stringify(payload);
+  const payloadB64 = base64UrlEncode(new TextEncoder().encode(payloadStr));
+  const signature = await sign(payloadB64, secret);
+  return `${payloadB64}.${signature}`;
+}
 
+/** 验证 handoff token 并返回 user，过期或无效返回 null */
+export async function verifyHandoffToken(
+  token: string
+): Promise<SessionUser | null> {
+  const [payloadB64, signature] = token.split(".");
+  if (!payloadB64 || !signature) return null;
+
+  try {
+    const secret = await getSecret();
+    if (!(await verify(payloadB64, signature, secret))) return null;
+
+    const payloadStr = new TextDecoder().decode(base64UrlDecode(payloadB64));
+    const payload = JSON.parse(payloadStr) as {
+      user: SessionUser;
+      exp: number;
+      handoff?: boolean;
+    };
+
+    if (!payload.handoff || payload.exp < Date.now() / 1000) return null;
+    return payload.user;
+  } catch {
+    return null;
+  }
+}
+
+/** 验证 session token 并返回 user，供 getSession 和 middleware 使用 */
+export async function verifySessionToken(
+  token: string
+): Promise<SessionUser | null> {
   const [payloadB64, signature] = token.split(".");
   if (!payloadB64 || !signature) return null;
 
@@ -93,5 +144,12 @@ export async function getSession(): Promise<SessionUser | null> {
   } catch {
     return null;
   }
+}
+
+export async function getSession(): Promise<SessionUser | null> {
+  const cookieStore = await cookies();
+  const token = cookieStore.get(SESSION_COOKIE)?.value;
+  if (!token) return null;
+  return verifySessionToken(token);
 }
 

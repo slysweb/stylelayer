@@ -1,10 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import {
-  createSession,
-  SESSION_COOKIE,
-  SESSION_COOKIE_OPTIONS,
-  type SessionUser,
-} from "@/lib/auth";
+import { createHandoffToken, type SessionUser } from "@/lib/auth";
 
 const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token";
 const GOOGLE_USERINFO_URL = "https://www.googleapis.com/oauth2/v2/userinfo";
@@ -86,8 +81,8 @@ export async function GET(request: NextRequest) {
     console.error("Failed to create user in DB:", e);
   }
 
-  const token = await createSession(user);
-  const response = NextResponse.redirect(new URL("/generate", request.url));
-  response.cookies.set(SESSION_COOKIE, token, SESSION_COOKIE_OPTIONS);
-  return response;
+  const handoffToken = await createHandoffToken(user);
+  const completeUrl = new URL("/auth/complete", request.url);
+  completeUrl.searchParams.set("token", handoffToken);
+  return NextResponse.redirect(completeUrl);
 }

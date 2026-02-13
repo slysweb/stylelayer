@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 
 function GoogleIcon() {
@@ -27,13 +27,9 @@ function GoogleIcon() {
 }
 
 export default function SignInPage() {
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const error = params.get("error");
-    if (error) {
-      console.error("Sign-in error:", error);
-    }
-  }, []);
+  const searchParams = useSearchParams();
+  const error = searchParams.get("error");
+  const expired = searchParams.get("expired");
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-[#fafaf9] px-4">
@@ -45,6 +41,20 @@ export default function SignInPage() {
           <p className="mt-2 text-sm text-stone-500">
             Sign in to generate layouts
           </p>
+          {expired && (
+            <p className="mt-2 text-sm text-amber-600">
+              Your session has expired. Please sign in again.
+            </p>
+          )}
+          {error && !expired && error !== "access_denied" && (
+            <p className="mt-2 text-sm text-amber-600">
+              {error === "session_expired"
+                ? "Link expired. Please try signing in again."
+                : error === "no_token"
+                  ? "Invalid request. Please try again."
+                  : null}
+            </p>
+          )}
         </div>
 
         <div className="rounded-xl border border-stone-200 bg-white p-8 shadow-sm">
