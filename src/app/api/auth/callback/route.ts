@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
-  createHandoffToken,
+  SESSION_COOKIE,
+  SESSION_MAX_AGE,
   createSignedSessionToken,
   type SessionUser,
 } from "@/lib/auth";
@@ -26,6 +27,7 @@ export async function GET(request: NextRequest) {
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
 
   if (!clientId || !clientSecret) {
+    console.error("Missing GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET");
     return NextResponse.redirect(new URL("/sign-in?error=config", request.url));
   }
 
@@ -86,22 +88,42 @@ export async function GET(request: NextRequest) {
     console.error("Failed to create user in DB:", e);
   }
 
-  // 优先 D1 session；失败时 fallback 到签名 token（依赖 AUTH_SECRET）
-  let sessionId: string;
+  // 创建 session token
+  let sessionToken: string;
   try {
-    sessionId = await createDbSession(user);
+    sessionToken = await createDbSession(user);
+    console.log("Session created in D1, length:", sessionToken.length);
   } catch (e) {
-    console.error("Failed to create session in D1, using signed token fallback:", e);
+    console.error("D1 session failed, using signed token:", e);
     try {
-      sessionId = await createSignedSessionToken(user);
+      sessionToken = await createSignedSessionToken(user);
+      console.log("Signed session created, length:", sessionToken.length);
     } catch (e2) {
-      console.error("Signed token fallback also failed:", e2);
+      console.error("Signed token also failed:", e2);
       return NextResponse.redirect(new URL("/sign-in?error=session", request.url));
     }
   }
 
-  const handoffToken = await createHandoffToken(user, sessionId);
-  const completeUrl = new URL("/auth/complete", request.url);
-  completeUrl.searchParams.set("token", handoffToken);
-  return NextResponse.redirect(completeUrl);
+  // 直接在 callback 中设置 cookie 并重定向到首页
+  // 不使用中间页，减少跳转次数
+  const response = new Response(null, {
+    status: 302,
+    headers: {
+      Location: new URL("/", request.url).toString(),
+    },
+  });
+  // 手动设置 Set-Cookie 头，避免 NextResponse 的任何潜在干扰
+  const cookieParts = [
+    `${SESSION_COOKIE}=${sessionToken}`,
+    `Path=/`,
+    `Max-Age=${SESSION_MAX_AGE}`,
+    `HttpOnly`,
+    `SameSite=Lax`,
+  ];
+  if (request.url.startsWith("https://")) {
+    cookieParts.push("Secure");
+  }
+  response.headers.set("Set-Cookie", cookieParts.join("; "));
+  console.log("Set-Cookie header:", response.headers.get("Set-Cookie")?.slice(0, 80) + "...");
+  return response;
 }
