@@ -108,6 +108,13 @@ export async function createSession(user: SessionUser): Promise<string> {
   return createDbSession(user);
 }
 
+/** 创建签名 session token（D1 不可用时的 fallback） */
+export async function createSignedSessionToken(
+  user: SessionUser
+): Promise<string> {
+  return createSignedSessionTokenInternal(user);
+}
+
 /** 短期 handoff token，用于 OAuth 回调后设置 cookie。payload 包含 session_id（在 callback 创建） */
 export async function createHandoffToken(
   user: SessionUser,
@@ -155,12 +162,44 @@ export async function verifyHandoffToken(
   }
 }
 
-/** 验证 session token（D1 查询）并返回 user，供 getSession 和 middleware 使用 */
+/** 验证 session token：优先 D1 查询，否则尝试签名 token（fallback） */
 export async function verifySessionToken(
   token: string
 ): Promise<SessionUser | null> {
   if (!token || token.length < 16) return null;
-  return getSessionByToken(token);
+  const fromDb = await getSessionByToken(token);
+  if (fromDb) return fromDb;
+  return verifySignedSessionToken(token);
+}
+
+/** 验证签名 session token（D1 不可用时的 fallback） */
+async function verifySignedSessionToken(
+  token: string
+): Promise<SessionUser | null> {
+  const [payloadB64, signature] = token.split(".");
+  if (!payloadB64 || !signature) return null;
+  try {
+    const secret = await getSecret();
+    if (!(await verify(payloadB64, signature, secret))) return null;
+    const payloadStr = new TextDecoder().decode(base64UrlDecode(payloadB64));
+    const payload = JSON.parse(payloadStr) as { user: SessionUser; exp: number };
+    if (payload.exp < Date.now() / 1000) return null;
+    return payload.user;
+  } catch {
+    return null;
+  }
+}
+
+async function createSignedSessionTokenInternal(user: SessionUser): Promise<string> {
+  const secret = await getSecret();
+  const payload = {
+    user,
+    exp: Math.floor(Date.now() / 1000) + SESSION_MAX_AGE,
+  };
+  const payloadStr = JSON.stringify(payload);
+  const payloadB64 = base64UrlEncode(new TextEncoder().encode(payloadStr));
+  const signature = await sign(payloadB64, secret);
+  return `${payloadB64}.${signature}`;
 }
 
 export async function getSession(): Promise<SessionUser | null> {

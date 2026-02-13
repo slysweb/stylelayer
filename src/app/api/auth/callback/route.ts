@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createHandoffToken, type SessionUser } from "@/lib/auth";
+import {
+  createHandoffToken,
+  createSignedSessionToken,
+  type SessionUser,
+} from "@/lib/auth";
 import { createDbSession } from "@/lib/sessions";
 
 const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token";
@@ -82,13 +86,18 @@ export async function GET(request: NextRequest) {
     console.error("Failed to create user in DB:", e);
   }
 
-  // 在 callback 中创建 session（此处 D1 可用），避免 auth/complete 中 getDb 失败
+  // 优先 D1 session；失败时 fallback 到签名 token（依赖 AUTH_SECRET）
   let sessionId: string;
   try {
     sessionId = await createDbSession(user);
   } catch (e) {
-    console.error("Failed to create session in DB:", e);
-    return NextResponse.redirect(new URL("/sign-in?error=session", request.url));
+    console.error("Failed to create session in D1, using signed token fallback:", e);
+    try {
+      sessionId = await createSignedSessionToken(user);
+    } catch (e2) {
+      console.error("Signed token fallback also failed:", e2);
+      return NextResponse.redirect(new URL("/sign-in?error=session", request.url));
+    }
   }
 
   const handoffToken = await createHandoffToken(user, sessionId);
