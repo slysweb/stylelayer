@@ -82,12 +82,15 @@ export function Navigation() {
               {user.name?.[0] ?? user.email?.[0] ?? "?"}
             </span>
           )}
-          <Link
-            href="/api/auth/signout"
+          <button
+            onClick={async () => {
+              await fetch("/api/auth/signout", { method: "POST", credentials: "include" });
+              window.location.href = "/";
+            }}
             className="text-sm font-medium text-stone-600 transition-colors hover:text-stone-900"
           >
             Sign out
-          </Link>
+          </button>
         </>
       ) : (
         <Link
