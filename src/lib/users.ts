@@ -1,4 +1,4 @@
-import { getDbOrThrow } from "./db";
+import { getDb } from "./db";
 
 export type DbUser = {
   id: number;
@@ -17,7 +17,8 @@ export async function getOrCreateUser(
   googleId: string,
   email: string
 ): Promise<DbUser | null> {
-  const db = await getDbOrThrow();
+  const db = await getDb();
+  if (!db) return null;
 
   const existing = await db
     .prepare("SELECT * FROM users WHERE google_id = ?")
@@ -56,7 +57,8 @@ export async function getOrCreateUser(
 export async function getUserByGoogleId(
   googleId: string
 ): Promise<DbUser | null> {
-  const db = await getDbOrThrow();
+  const db = await getDb();
+  if (!db) return null;
   const row = await db
     .prepare("SELECT * FROM users WHERE google_id = ?")
     .bind(googleId)

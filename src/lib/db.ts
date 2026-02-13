@@ -14,9 +14,14 @@ export type D1Database = {
 };
 
 export async function getDb(): Promise<D1Database | null> {
-  const ctx = await getCloudflareContext({ async: true });
-  const db = (ctx.env as { DB?: D1Database }).DB;
-  return db ?? null;
+  try {
+    const ctx = await getCloudflareContext({ async: true });
+    const db = (ctx.env as { DB?: D1Database }).DB;
+    return db ?? null;
+  } catch (e) {
+    console.error("getDb: getCloudflareContext failed", e);
+    return null;
+  }
 }
 
 export async function getDbOrThrow(): Promise<D1Database> {
