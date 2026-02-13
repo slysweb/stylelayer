@@ -111,26 +111,11 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // 返回 JSON（和 test-cookie 完全一样的模式），不跳转，先验证 cookie 是否能设置
-    const response = NextResponse.json({
-      ok: true,
-      steps,
-      sessionType,
-      sessionTokenLength: sessionToken.length,
-      message: "Login successful. Check cookies in DevTools. Then go to /api/auth/debug",
-    });
-    // 设置 session cookie
+    // 使用 NextResponse.redirect + cookies.set
+    const response = NextResponse.redirect(new URL("/", request.url));
     response.cookies.set(SESSION_COOKIE, sessionToken, {
       path: "/",
       maxAge: SESSION_MAX_AGE,
-      httpOnly: true,
-      secure: request.url.startsWith("https://"),
-      sameSite: "lax",
-    });
-    // 同时设置一个简单的测试 cookie 作为对比
-    response.cookies.set("cb_test", "from_callback_" + Date.now(), {
-      path: "/",
-      maxAge: 3600,
       httpOnly: true,
       secure: request.url.startsWith("https://"),
       sameSite: "lax",
