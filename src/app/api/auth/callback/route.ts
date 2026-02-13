@@ -104,15 +104,8 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  // 直接在 callback 中设置 cookie 并重定向到首页
-  // 不使用中间页，减少跳转次数
-  const response = new Response(null, {
-    status: 302,
-    headers: {
-      Location: new URL("/", request.url).toString(),
-    },
-  });
-  // 手动设置 Set-Cookie 头，避免 NextResponse 的任何潜在干扰
+  // 返回 200 HTML 页面，浏览器会先处理 Set-Cookie，然后 JS 跳转
+  // 302 redirect 在 Cloudflare/OpenNext 上 Set-Cookie 会被丢弃
   const cookieParts = [
     `${SESSION_COOKIE}=${sessionToken}`,
     `Path=/`,
@@ -123,7 +116,18 @@ export async function GET(request: NextRequest) {
   if (request.url.startsWith("https://")) {
     cookieParts.push("Secure");
   }
-  response.headers.set("Set-Cookie", cookieParts.join("; "));
-  console.log("Set-Cookie header:", response.headers.get("Set-Cookie")?.slice(0, 80) + "...");
-  return response;
+  const cookieHeader = cookieParts.join("; ");
+  console.log("Setting cookie, length:", sessionToken.length);
+
+  const targetUrl = new URL("/", request.url).toString();
+  const html = `<!DOCTYPE html><html><head><title>Signing in...</title></head><body><p>Signing in...</p><script>window.location.href="${targetUrl}";</script></body></html>`;
+
+  return new Response(html, {
+    status: 200,
+    headers: {
+      "Content-Type": "text/html; charset=utf-8",
+      "Set-Cookie": cookieHeader,
+      "Cache-Control": "no-store, no-cache, must-revalidate, private",
+    },
+  });
 }
