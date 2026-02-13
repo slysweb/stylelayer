@@ -1,14 +1,9 @@
 import Link from "next/link";
 import { getSession } from "@/lib/auth";
-import { redirect } from "next/navigation";
 import { Navigation } from "@/components/navigation";
 
 export default async function HomePage() {
   const user = await getSession();
-
-  if (user) {
-    redirect("/generate");
-  }
 
   return (
     <div className="min-h-screen bg-[#fafaf9] text-stone-900">
@@ -31,14 +26,16 @@ export default async function HomePage() {
             product-style images with AI. Perfect for fashion, accessories, and more.
           </p>
           <Link
-            href="/sign-in"
+            href={user ? "/generate" : "/sign-in"}
             className="mt-10 inline-block rounded-lg border border-stone-900 bg-stone-900 px-8 py-3 text-base font-medium text-white transition-colors hover:bg-stone-800"
           >
-            Get started
+            {user ? "Generate" : "Get started"}
           </Link>
-          <p className="mt-4 text-sm text-stone-400">
-            Sign in with Google
-          </p>
+          {!user && (
+            <p className="mt-4 text-sm text-stone-400">
+              Sign in with Google
+            </p>
+          )}
         </div>
       </main>
     </div>
