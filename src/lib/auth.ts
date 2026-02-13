@@ -1,4 +1,5 @@
 import { cookies } from "next/headers";
+import { createDbSession, getSessionByToken } from "./sessions";
 
 export const SESSION_COOKIE = "stylelayer_session";
 export const SESSION_MAX_AGE = 60 * 60 * 24 * 7; // 7 days
@@ -39,7 +40,16 @@ export type SessionUser = {
 };
 
 async function getSecret(): Promise<string> {
-  const secret = process.env.AUTH_SECRET;
+  let secret = process.env.AUTH_SECRET;
+  if (!secret || secret.length < 32) {
+    try {
+      const { getCloudflareContext } = await import("@opennextjs/cloudflare");
+      const ctx = await getCloudflareContext({ async: true });
+      secret = (ctx.env as { AUTH_SECRET?: string }).AUTH_SECRET;
+    } catch {
+      // ignore
+    }
+  }
   if (!secret || secret.length < 32) {
     throw new Error("AUTH_SECRET must be set and at least 32 characters");
   }
@@ -93,16 +103,9 @@ async function verify(msg: string, sig: string, secret: string): Promise<boolean
   return sig === expected;
 }
 
+/** 创建 session，存入 D1，返回 session_id 作为 cookie 值 */
 export async function createSession(user: SessionUser): Promise<string> {
-  const secret = await getSecret();
-  const payload = {
-    user,
-    exp: Math.floor(Date.now() / 1000) + SESSION_MAX_AGE,
-  };
-  const payloadStr = JSON.stringify(payload);
-  const payloadB64 = base64UrlEncode(new TextEncoder().encode(payloadStr));
-  const signature = await sign(payloadB64, secret);
-  return `${payloadB64}.${signature}`;
+  return createDbSession(user);
 }
 
 /** 短期 handoff token，用于 OAuth 回调后设置 cookie（避免 redirect 时 cookie 丢失） */
@@ -144,25 +147,12 @@ export async function verifyHandoffToken(
   }
 }
 
-/** 验证 session token 并返回 user，供 getSession 和 middleware 使用 */
+/** 验证 session token（D1 查询）并返回 user，供 getSession 和 middleware 使用 */
 export async function verifySessionToken(
   token: string
 ): Promise<SessionUser | null> {
-  const [payloadB64, signature] = token.split(".");
-  if (!payloadB64 || !signature) return null;
-
-  try {
-    const secret = await getSecret();
-    if (!(await verify(payloadB64, signature, secret))) return null;
-
-    const payloadStr = new TextDecoder().decode(base64UrlDecode(payloadB64));
-    const payload = JSON.parse(payloadStr) as { user: SessionUser; exp: number };
-
-    if (payload.exp < Date.now() / 1000) return null;
-    return payload.user;
-  } catch {
-    return null;
-  }
+  if (!token || token.length < 16) return null;
+  return getSessionByToken(token);
 }
 
 export async function getSession(): Promise<SessionUser | null> {
