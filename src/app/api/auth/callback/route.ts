@@ -111,6 +111,8 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    console.log("sessionToken=====================", sessionToken);
+
     // NextResponse.json() + Refresh header
     // NextResponse.json 是唯一确认能保存 cookie 的方式
     // Refresh header 让浏览器在处理完响应（包括 cookie）后跳转
