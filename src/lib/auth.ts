@@ -16,7 +16,7 @@ export function getSessionCookieOptions(requestUrl?: string): {
   const opts: {
     httpOnly: boolean;
     secure: boolean;
-    sameSite: "lax" as const;
+    sameSite: "lax";
     maxAge: number;
     path: string;
     domain?: string;
@@ -45,7 +45,7 @@ export function getSessionCookieOptions(requestUrl?: string): {
 export const SESSION_COOKIE_OPTIONS = {
   httpOnly: true,
   secure: process.env.NODE_ENV === "production",
-  sameSite: "lax" as const,
+  sameSite: "lax",
   maxAge: SESSION_MAX_AGE,
   path: "/",
 };
