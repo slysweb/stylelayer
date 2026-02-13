@@ -104,30 +104,24 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  // 返回 200 HTML 页面，浏览器会先处理 Set-Cookie，然后 JS 跳转
-  // 302 redirect 在 Cloudflare/OpenNext 上 Set-Cookie 会被丢弃
-  const cookieParts = [
-    `${SESSION_COOKIE}=${sessionToken}`,
-    `Path=/`,
-    `Max-Age=${SESSION_MAX_AGE}`,
-    `HttpOnly`,
-    `SameSite=Lax`,
-  ];
-  if (request.url.startsWith("https://")) {
-    cookieParts.push("Secure");
-  }
-  const cookieHeader = cookieParts.join("; ");
-  console.log("Setting cookie, length:", sessionToken.length);
-
+  // 使用 NextResponse + cookies.set()，这是 Next.js 标准方式
   const targetUrl = new URL("/", request.url).toString();
-  const html = `<!DOCTYPE html><html><head><title>Signing in...</title></head><body><p>Signing in...</p><script>window.location.href="${targetUrl}";</script></body></html>`;
+  const html = `<!DOCTYPE html><html><head><title>Signing in...</title></head><body><p>Signing in, please wait...</p><script>setTimeout(function(){window.location.href="${targetUrl}"},500);</script></body></html>`;
 
-  return new Response(html, {
+  const response = new NextResponse(html, {
     status: 200,
     headers: {
       "Content-Type": "text/html; charset=utf-8",
-      "Set-Cookie": cookieHeader,
       "Cache-Control": "no-store, no-cache, must-revalidate, private",
     },
   });
+  response.cookies.set(SESSION_COOKIE, sessionToken, {
+    path: "/",
+    maxAge: SESSION_MAX_AGE,
+    httpOnly: true,
+    secure: request.url.startsWith("https://"),
+    sameSite: "lax",
+  });
+  console.log("Cookie set via NextResponse.cookies, token length:", sessionToken.length);
+  return response;
 }
