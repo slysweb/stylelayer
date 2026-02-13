@@ -6,6 +6,8 @@ import {
   getSessionCookieOptions,
 } from "@/lib/auth";
 
+export const dynamic = "force-dynamic";
+
 /**
  * OAuth 回调后的中间页：通过 GET 请求设置 cookie，避免 redirect 时 cookie 丢失。
  * 流程：/api/auth/callback -> redirect 到此处（带 handoff token）-> 设置 cookie -> 跳转到 /generate
@@ -27,17 +29,23 @@ export async function GET(request: NextRequest) {
 
   const sessionToken = await createSession(user);
   const targetUrl = new URL("/generate", request.url);
+  const opts = getSessionCookieOptions(request.url);
 
-  // 200 + meta refresh：先让浏览器完整接收响应并保存 cookie，再跳转
-  const html = `<!DOCTYPE html><html><head><meta http-equiv="refresh" content="0;url=${targetUrl.toString()}"></head><body>Redirecting...</body></html>`;
+  // 200 + meta refresh：延迟 1 秒让浏览器完整处理 Set-Cookie 后再跳转
+  const html = `<!DOCTYPE html><html><head><meta http-equiv="refresh" content="1;url=${targetUrl.toString()}"></head><body>Redirecting...</body></html>`;
   const response = new NextResponse(html, {
     status: 200,
     headers: { "Content-Type": "text/html; charset=utf-8" },
   });
-  response.cookies.set(
-    SESSION_COOKIE,
-    sessionToken,
-    getSessionCookieOptions(request.url)
-  );
+  // 手动构造 Set-Cookie，确保 Cloudflare 正确传递
+  const cookieParts = [
+    `${SESSION_COOKIE}=${sessionToken}`,
+    `Path=${opts.path}`,
+    `Max-Age=${opts.maxAge}`,
+    `HttpOnly`,
+    `SameSite=Lax`,
+  ];
+  if (opts.secure) cookieParts.push("Secure");
+  response.headers.set("Set-Cookie", cookieParts.join("; "));
   return response;
 }

@@ -4,41 +4,22 @@ export const SESSION_COOKIE = "stylelayer_session";
 export const SESSION_MAX_AGE = 60 * 60 * 24 * 7; // 7 days
 const HANDOFF_MAX_AGE = 60; // 1 min for OAuth redirect handoff
 
-export function getSessionCookieOptions(requestUrl?: string): {
+export function getSessionCookieOptions(_requestUrl?: string): {
   httpOnly: boolean;
   secure: boolean;
   sameSite: "lax";
   maxAge: number;
   path: string;
-  domain?: string;
 } {
   const isProd = process.env.NODE_ENV === "production";
-  const opts: {
-    httpOnly: boolean;
-    secure: boolean;
-    sameSite: "lax";
-    maxAge: number;
-    path: string;
-    domain?: string;
-  } = {
+  return {
     httpOnly: true,
     secure: isProd,
     sameSite: "lax",
     maxAge: SESSION_MAX_AGE,
     path: "/",
+    // 不设置 domain，使用默认（当前 host），避免显式 domain 导致 cookie 不持久化
   };
-  // 生产环境显式设置 domain，确保 cookie 在 stylelayer.app 正确持久化
-  if (isProd && requestUrl) {
-    try {
-      const host = new URL(requestUrl).hostname;
-      if (host === "stylelayer.app" || host.endsWith(".stylelayer.app")) {
-        opts.domain = ".stylelayer.app";
-      }
-    } catch {
-      // ignore
-    }
-  }
-  return opts;
 }
 
 /** @deprecated 使用 getSessionCookieOptions 以支持生产 domain */
