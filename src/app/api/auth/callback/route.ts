@@ -111,8 +111,10 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // 使用 NextResponse.redirect + cookies.set
-    const response = NextResponse.redirect(new URL("/", request.url));
+    // NextResponse.json() + Refresh header
+    // NextResponse.json 是唯一确认能保存 cookie 的方式
+    // Refresh header 让浏览器在处理完响应（包括 cookie）后跳转
+    const response = NextResponse.json({ ok: true });
     response.cookies.set(SESSION_COOKIE, sessionToken, {
       path: "/",
       maxAge: SESSION_MAX_AGE,
@@ -120,6 +122,7 @@ export async function GET(request: NextRequest) {
       secure: request.url.startsWith("https://"),
       sameSite: "lax",
     });
+    response.headers.set("Refresh", `0; url=${new URL("/", request.url).toString()}`);
     return response;
   } catch (e) {
     // 捕获任何未处理的异常
