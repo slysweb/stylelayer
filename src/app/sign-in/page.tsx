@@ -1,5 +1,6 @@
 "use client";
 
+import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 
@@ -26,7 +27,7 @@ function GoogleIcon() {
   );
 }
 
-export default function SignInPage() {
+function SignInContent() {
   const searchParams = useSearchParams();
   const error = searchParams.get("error");
   const expired = searchParams.get("expired");
@@ -77,5 +78,17 @@ export default function SignInPage() {
         </p>
       </div>
     </div>
+  );
+}
+
+export default function SignInPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex min-h-screen items-center justify-center bg-[#fafaf9]">
+        <div className="h-8 w-8 animate-pulse rounded-full bg-stone-200" />
+      </div>
+    }>
+      <SignInContent />
+    </Suspense>
   );
 }
