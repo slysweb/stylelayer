@@ -13,6 +13,7 @@ type SessionUser = {
 
 export function Navigation() {
   const [user, setUser] = useState<SessionUser | null>(null);
+  const [credits, setCredits] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -22,6 +23,23 @@ export function Navigation() {
         setUser(data.user);
       })
       .finally(() => setLoading(false));
+  }, []);
+
+  const fetchCredits = () => {
+    fetch("/api/user/credits")
+      .then((res) => res.json())
+      .then((data) => setCredits(data.credits ?? 0))
+      .catch(() => setCredits(null));
+  };
+
+  useEffect(() => {
+    if (user) fetchCredits();
+  }, [user]);
+
+  useEffect(() => {
+    const handler = () => fetchCredits();
+    window.addEventListener("credits-updated", handler);
+    return () => window.removeEventListener("credits-updated", handler);
   }, []);
 
   if (loading) {
@@ -34,6 +52,11 @@ export function Navigation() {
     <nav className="flex items-center gap-4">
       {user ? (
         <>
+          {credits !== null && (
+            <span className="rounded-md bg-stone-100 px-2 py-1 text-sm font-medium text-stone-600">
+              {credits} credits
+            </span>
+          )}
           <Link
             href="/dashboard"
             className="text-sm font-medium text-stone-600 transition-colors hover:text-stone-900"

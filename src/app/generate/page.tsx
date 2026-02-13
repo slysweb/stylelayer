@@ -82,6 +82,7 @@ export default function GeneratePage() {
 
       if (result.ok) {
         setGeneratedImageUrl(result.imageUrl);
+        window.dispatchEvent(new Event("credits-updated"));
       } else {
         setError(result.error);
       }

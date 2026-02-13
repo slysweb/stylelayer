@@ -2,6 +2,13 @@
 
 import { signRequest } from "@/lib/volc-sign";
 import { EXTRACT_PROMPTS, type ExtractType } from "@/lib/extract-types";
+import { getSession } from "@/lib/auth";
+import { getOrCreateUser } from "@/lib/users";
+import {
+  createGenerationAndDeductCredits,
+  completeGeneration,
+  failAndRefundGeneration,
+} from "@/lib/generations";
 
 const JIMENG_ACCESS_KEY = process.env.JIMENG_ACCESS_KEY ?? process.env.VOLC_ACCESSKEY;
 const JIMENG_SECRET_KEY = process.env.JIMENG_SECRET_KEY ?? process.env.VOLC_SECRETKEY;
@@ -60,11 +67,34 @@ async function generateDeconstructedOutfitInner(
   extractType: ExtractType,
   customItem?: string
 ): Promise<GenerateResult> {
-  if (!JIMENG_ACCESS_KEY || !JIMENG_SECRET_KEY) {
-    return { ok: false, error: "Jimeng AK/SK not configured (JIMENG_ACCESS_KEY, JIMENG_SECRET_KEY)" };
+  const sessionUser = await getSession();
+  if (!sessionUser) {
+    return { ok: false, error: "Please sign in to generate" };
+  }
+
+  const dbUser = await getOrCreateUser(sessionUser.id, sessionUser.email);
+  if (!dbUser) {
+    return { ok: false, error: "Database unavailable" };
   }
 
   const editPrompt = buildEditPrompt(extractType, customItem);
+
+  const genResult = await createGenerationAndDeductCredits(
+    sessionUser.id,
+    imageUrl,
+    editPrompt
+  );
+
+  if ("error" in genResult) {
+    return { ok: false, error: genResult.error };
+  }
+
+  const { generationId } = genResult;
+
+  if (!JIMENG_ACCESS_KEY || !JIMENG_SECRET_KEY) {
+    await failAndRefundGeneration(generationId, sessionUser.id);
+    return { ok: false, error: "Jimeng AK/SK not configured (JIMENG_ACCESS_KEY, JIMENG_SECRET_KEY)" };
+  }
 
   try {
     // 1. 提交任务 - CVSync2AsyncSubmitTask
@@ -81,6 +111,7 @@ async function generateDeconstructedOutfitInner(
     const submitRes = await signedFetch("CVSync2AsyncSubmitTask", submitBody);
     const submitText = await submitRes.text();
     if (!submitRes.ok) {
+      await failAndRefundGeneration(generationId, sessionUser.id);
       return { ok: false, error: `API error ${submitRes.status}: ${submitText.slice(0, 300)}` };
     }
 
@@ -88,10 +119,12 @@ async function generateDeconstructedOutfitInner(
     try {
       submitData = JSON.parse(submitText) as typeof submitData;
     } catch {
+      await failAndRefundGeneration(generationId, sessionUser.id);
       return { ok: false, error: "Invalid API response" };
     }
 
     if (submitData.code !== 10000 || !submitData.data?.task_id) {
+      await failAndRefundGeneration(generationId, sessionUser.id);
       return {
         ok: false,
         error: submitData.message ?? "No task_id in submit response",
@@ -101,9 +134,18 @@ async function generateDeconstructedOutfitInner(
     const taskId = submitData.data.task_id;
 
     // 2. Poll for result - CVSync2AsyncGetResult
-    return await pollJimengTask(taskId);
+    const result = await pollJimengTask(taskId);
+
+    if (result.ok) {
+      await completeGeneration(generationId, result.imageUrl);
+      return result;
+    }
+
+    await failAndRefundGeneration(generationId, sessionUser.id);
+    return result;
   } catch (e) {
     console.error("Jimeng generate error:", e);
+    await failAndRefundGeneration(generationId, sessionUser.id);
     return {
       ok: false,
       error: e instanceof Error ? e.message : "Generation failed",

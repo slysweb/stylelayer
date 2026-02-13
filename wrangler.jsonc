@@ -10,7 +10,7 @@
   "d1_databases": [
     {
       "binding": "DB",
-      "database_name": "stylelayer-db",
+      "database_name": "stylelayer",
       "database_id": "ea8f7e0d-9a9e-4701-bf6b-f2d320545570",
       "migrations_dir": "migrations"
     }

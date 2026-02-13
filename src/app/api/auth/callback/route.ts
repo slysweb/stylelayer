@@ -79,6 +79,13 @@ export async function GET(request: NextRequest) {
     picture: userInfo.picture,
   };
 
+  try {
+    const { getOrCreateUser } = await import("@/lib/users");
+    await getOrCreateUser(user.id, user.email);
+  } catch (e) {
+    console.error("Failed to create user in DB:", e);
+  }
+
   const token = await createSession(user);
   const response = NextResponse.redirect(new URL("/generate", request.url));
   response.cookies.set(SESSION_COOKIE, token, SESSION_COOKIE_OPTIONS);
