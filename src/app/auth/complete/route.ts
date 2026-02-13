@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
-  createSession,
   verifyHandoffToken,
   SESSION_COOKIE,
   getSessionCookieOptions,
@@ -22,12 +21,13 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(new URL("/sign-in?error=no_token", request.url));
   }
 
-  const user = await verifyHandoffToken(token);
-  if (!user) {
+  const handoff = await verifyHandoffToken(token);
+  if (!handoff) {
     return NextResponse.redirect(new URL("/sign-in?error=session_expired", request.url));
   }
 
-  const sessionToken = await createSession(user);
+  // session 已在 callback 中创建，此处直接使用 sessionId 设置 cookie
+  const sessionToken = handoff.sessionId;
   const targetUrl = new URL("/", request.url);
   const opts = getSessionCookieOptions(request.url);
 

@@ -108,11 +108,15 @@ export async function createSession(user: SessionUser): Promise<string> {
   return createDbSession(user);
 }
 
-/** 短期 handoff token，用于 OAuth 回调后设置 cookie（避免 redirect 时 cookie 丢失） */
-export async function createHandoffToken(user: SessionUser): Promise<string> {
+/** 短期 handoff token，用于 OAuth 回调后设置 cookie。payload 包含 session_id（在 callback 创建） */
+export async function createHandoffToken(
+  user: SessionUser,
+  sessionId: string
+): Promise<string> {
   const secret = await getSecret();
   const payload = {
     user,
+    sessionId,
     exp: Math.floor(Date.now() / 1000) + HANDOFF_MAX_AGE,
     handoff: true,
   };
@@ -122,10 +126,12 @@ export async function createHandoffToken(user: SessionUser): Promise<string> {
   return `${payloadB64}.${signature}`;
 }
 
-/** 验证 handoff token 并返回 user，过期或无效返回 null */
+export type HandoffResult = { user: SessionUser; sessionId: string };
+
+/** 验证 handoff token 并返回 user 和 sessionId，过期或无效返回 null */
 export async function verifyHandoffToken(
   token: string
-): Promise<SessionUser | null> {
+): Promise<HandoffResult | null> {
   const [payloadB64, signature] = token.split(".");
   if (!payloadB64 || !signature) return null;
 
@@ -136,12 +142,14 @@ export async function verifyHandoffToken(
     const payloadStr = new TextDecoder().decode(base64UrlDecode(payloadB64));
     const payload = JSON.parse(payloadStr) as {
       user: SessionUser;
+      sessionId: string;
       exp: number;
       handoff?: boolean;
     };
 
-    if (!payload.handoff || payload.exp < Date.now() / 1000) return null;
-    return payload.user;
+    if (!payload.handoff || !payload.sessionId || payload.exp < Date.now() / 1000)
+      return null;
+    return { user: payload.user, sessionId: payload.sessionId };
   } catch {
     return null;
   }

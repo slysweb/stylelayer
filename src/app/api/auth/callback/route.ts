@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createHandoffToken, type SessionUser } from "@/lib/auth";
+import { createDbSession } from "@/lib/sessions";
 
 const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token";
 const GOOGLE_USERINFO_URL = "https://www.googleapis.com/oauth2/v2/userinfo";
@@ -81,7 +82,16 @@ export async function GET(request: NextRequest) {
     console.error("Failed to create user in DB:", e);
   }
 
-  const handoffToken = await createHandoffToken(user);
+  // 在 callback 中创建 session（此处 D1 可用），避免 auth/complete 中 getDb 失败
+  let sessionId: string;
+  try {
+    sessionId = await createDbSession(user);
+  } catch (e) {
+    console.error("Failed to create session in DB:", e);
+    return NextResponse.redirect(new URL("/sign-in?error=session", request.url));
+  }
+
+  const handoffToken = await createHandoffToken(user, sessionId);
   const completeUrl = new URL("/auth/complete", request.url);
   completeUrl.searchParams.set("token", handoffToken);
   return NextResponse.redirect(completeUrl);
