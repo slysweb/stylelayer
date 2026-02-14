@@ -370,12 +370,18 @@ export default async function HomePage() {
               height={138}
               className="h-6 w-auto"
             />
-            <nav className="flex items-center gap-6">
+            <nav className="flex flex-wrap items-center gap-6">
               <Link
                 href="/about"
                 className="text-sm text-stone-400 transition-colors hover:text-stone-600"
               >
                 About
+              </Link>
+              <Link
+                href="/pricing"
+                className="text-sm text-stone-400 transition-colors hover:text-stone-600"
+              >
+                Pricing
               </Link>
               <Link
                 href="/privacy"
