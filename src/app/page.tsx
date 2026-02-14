@@ -362,7 +362,7 @@ export default async function HomePage() {
       {/* Footer */}
       <footer className="border-t border-stone-200/80">
         <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
-          <div className="flex flex-col items-center justify-between gap-4 sm:flex-row">
+          <div className="flex flex-col items-center gap-6 sm:flex-row sm:justify-between">
             <Image
               src="/logo.jpeg"
               alt="StyleLayer AI"
@@ -370,6 +370,28 @@ export default async function HomePage() {
               height={138}
               className="h-6 w-auto"
             />
+            <nav className="flex items-center gap-6">
+              <Link
+                href="/about"
+                className="text-sm text-stone-400 transition-colors hover:text-stone-600"
+              >
+                About
+              </Link>
+              <Link
+                href="/privacy"
+                className="text-sm text-stone-400 transition-colors hover:text-stone-600"
+              >
+                Privacy Policy
+              </Link>
+              <Link
+                href="/terms"
+                className="text-sm text-stone-400 transition-colors hover:text-stone-600"
+              >
+                Terms of Service
+              </Link>
+            </nav>
+          </div>
+          <div className="mt-6 border-t border-stone-200/60 pt-6 text-center">
             <p className="text-sm text-stone-400">
               &copy; {new Date().getFullYear()} StyleLayer. All rights reserved.
             </p>
