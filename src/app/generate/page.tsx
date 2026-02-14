@@ -120,12 +120,28 @@ export default function GeneratePage() {
     [handleFile]
   );
 
-  const handleDownload = useCallback(() => {
+  const [downloading, setDownloading] = useState(false);
+
+  const handleDownload = useCallback(async () => {
     if (!generatedImageUrl) return;
-    const a = document.createElement("a");
-    a.href = generatedImageUrl;
-    a.download = `stylelayer-${Date.now()}.png`;
-    a.click();
+    setDownloading(true);
+    try {
+      const res = await fetch(generatedImageUrl);
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `stylelayer-${Date.now()}.png`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch {
+      // Fallback: open in new tab if fetch fails
+      window.open(generatedImageUrl, "_blank");
+    } finally {
+      setDownloading(false);
+    }
   }, [generatedImageUrl]);
 
   const handleReset = useCallback(() => {
@@ -333,12 +349,17 @@ export default function GeneratePage() {
             {!loading && generatedImageUrl && (
               <Button
                 onClick={handleDownload}
+                disabled={downloading}
                 variant="outline"
                 size="lg"
                 className="w-full rounded-xl text-base"
               >
-                <Download className="mr-2 h-5 w-5" />
-                Download Image
+                {downloading ? (
+                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                ) : (
+                  <Download className="mr-2 h-5 w-5" />
+                )}
+                {downloading ? "Downloading..." : "Download Image"}
               </Button>
             )}
           </div>
