@@ -66,19 +66,29 @@ function formatDate(dateStr: string): string {
   }
 }
 
-/** Map Chinese API prompts to English display labels */
+/**
+ * Map Chinese API prompts to English display labels.
+ * Includes both old (without 如果存在) and current (with 如果存在) prompt formats.
+ */
 const PROMPT_DISPLAY_MAP: Record<string, string> = {
-  "提取出图片中的衣服、帽子、鞋子和包，生成一张平铺图，背景为纯白色。": "Full Outfit — clothes, hat, shoes & bag",
+  // Current prompts (with 如果存在)
+  "提取出图片中的衣服、帽子、鞋子和包（如果存在），生成一张平铺图，背景为纯白色。": "Full Outfit",
   "提取出图片中的一双鞋子，生成一张正45度图，背景为纯白色。": "Shoes",
+  "提取出图片中的完整的包包和包带（如果存在），正视图，背景为纯白色。": "Bag & Handbag",
+  "提取出图片中的完整的沙发（如果存在），生成一张正视图，背景为纯白色。": "Sofa & Furniture",
+  "提取出图片中的日用品（如果存在），生成一张正视图，背景为纯白色。": "Daily Essentials",
+  "提取出图片中的饰品（如果存在），生成一张正视图，背景为纯白色。": "Accessories & Jewelry",
+  // Old prompts (without 如果存在, for historical records)
+  "提取出图片中的衣服、帽子、鞋子和包，生成一张平铺图，背景为纯白色。": "Full Outfit",
   "提取出图片中的完整的包包和包带，正视图，背景为纯白色。": "Bag & Handbag",
   "提取出图片中的完整的沙发，生成一张正视图，背景为纯白色。": "Sofa & Furniture",
   "提取出图片中的日用品，生成一张正视图，背景为纯白色。": "Daily Essentials",
   "提取出图片中的饰品，生成一张正视图，背景为纯白色。": "Accessories & Jewelry",
 };
 
-/** Known Chinese keywords that map to preset types (to avoid showing as Custom) */
+/** Known Chinese keywords for fallback contains-matching */
 const KNOWN_KEYWORDS: Record<string, string> = {
-  "衣服、帽子、鞋子和包": "Full Outfit — clothes, hat, shoes & bag",
+  "衣服、帽子、鞋子和包": "Full Outfit",
   "一双鞋子": "Shoes",
   "完整的包包和包带": "Bag & Handbag",
   "完整的沙发": "Sofa & Furniture",
@@ -90,14 +100,14 @@ function displayPrompt(prompt: string | null): string {
   if (!prompt) return "—";
   // Exact match to preset prompts
   if (PROMPT_DISPLAY_MAP[prompt]) return PROMPT_DISPLAY_MAP[prompt];
+  // Check if prompt contains a known keyword (handles slight variations)
+  for (const [keyword, label] of Object.entries(KNOWN_KEYWORDS)) {
+    if (prompt.includes(keyword)) return label;
+  }
   // Custom prompts: extract user input from "提取出图片中的XXX，..."
-  const match = prompt.match(/提取出图片中的(.+?)，/);
+  const match = prompt.match(/提取出图片中的(.+?)[，,]/);
   if (match) {
-    const userInput = match[1];
-    // Check if it accidentally matches a known preset keyword
-    if (KNOWN_KEYWORDS[userInput]) return KNOWN_KEYWORDS[userInput];
-    // Show the user's custom input directly
-    return `Custom: ${userInput}`;
+    return `Custom: ${match[1]}`;
   }
   return "Custom";
 }
