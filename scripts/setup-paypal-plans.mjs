@@ -27,7 +27,8 @@ try {
 
 const CLIENT_ID = process.env.PAYPAL_CLIENT_ID || "YOUR_CLIENT_ID";
 const CLIENT_SECRET = process.env.PAYPAL_CLIENT_SECRET || "YOUR_CLIENT_SECRET";
-const BASE_URL = "https://api-m.sandbox.paypal.com"; // Change to https://api-m.paypal.com for live
+const MODE = process.env.PAYPAL_MODE || "sandbox";
+const BASE_URL = MODE === "live" ? "https://api-m.paypal.com" : "https://api-m.sandbox.paypal.com";
 
 async function getAccessToken() {
   const auth = Buffer.from(`${CLIENT_ID}:${CLIENT_SECRET}`).toString("base64");

@@ -370,6 +370,14 @@ export default function GeneratePage() {
           <div className="mt-6 rounded-xl border border-red-200 bg-red-50 px-5 py-4 text-sm text-red-700">
             <p className="font-medium">Something went wrong</p>
             <p className="mt-1 text-red-600">{error}</p>
+            {error.toLowerCase().includes("insufficient credits") && (
+              <Link
+                href="/pricing"
+                className="mt-3 inline-flex items-center rounded-lg bg-stone-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-stone-800"
+              >
+                Upgrade Your Plan
+              </Link>
+            )}
           </div>
         )}
       </main>

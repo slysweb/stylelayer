@@ -76,13 +76,30 @@ const PROMPT_DISPLAY_MAP: Record<string, string> = {
   "提取出图片中的饰品，生成一张正视图，背景为纯白色。": "Accessories & Jewelry",
 };
 
+/** Known Chinese keywords that map to preset types (to avoid showing as Custom) */
+const KNOWN_KEYWORDS: Record<string, string> = {
+  "衣服、帽子、鞋子和包": "Full Outfit — clothes, hat, shoes & bag",
+  "一双鞋子": "Shoes",
+  "完整的包包和包带": "Bag & Handbag",
+  "完整的沙发": "Sofa & Furniture",
+  "日用品": "Daily Essentials",
+  "饰品": "Accessories & Jewelry",
+};
+
 function displayPrompt(prompt: string | null): string {
   if (!prompt) return "—";
+  // Exact match to preset prompts
   if (PROMPT_DISPLAY_MAP[prompt]) return PROMPT_DISPLAY_MAP[prompt];
-  // Custom prompts: extract the item name from "提取出图片中的XXX，..."
+  // Custom prompts: extract user input from "提取出图片中的XXX，..."
   const match = prompt.match(/提取出图片中的(.+?)，/);
-  if (match) return `Custom: ${match[1]}`;
-  return prompt;
+  if (match) {
+    const userInput = match[1];
+    // Check if it accidentally matches a known preset keyword
+    if (KNOWN_KEYWORDS[userInput]) return KNOWN_KEYWORDS[userInput];
+    // Show the user's custom input directly
+    return `Custom: ${userInput}`;
+  }
+  return "Custom";
 }
 
 function statusBadge(status: string) {
