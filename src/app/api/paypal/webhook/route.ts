@@ -103,22 +103,36 @@ export async function POST(request: NextRequest) {
       }
 
       case "PAYMENT.SALE.COMPLETED": {
-        // Recurring payment completed — add monthly credits
+        // Recurring payment completed — add credits only for RENEWALS
+        // (Initial payment credits are added in subscription-callback)
         const subId = resource.billing_agreement_id;
         if (subId) {
           const sub = (await db
             .prepare(
-              "SELECT user_id, credits_per_month, plan FROM subscriptions WHERE paypal_subscription_id = ? AND status = 'ACTIVE'"
+              "SELECT user_id, credits_per_month, plan, current_period_start FROM subscriptions WHERE paypal_subscription_id = ? AND status = 'ACTIVE'"
             )
             .bind(subId)
             .first()) as {
             user_id: string;
             credits_per_month: number;
             plan: string;
+            current_period_start: string | null;
           } | null;
 
           if (sub) {
-            // Add credits
+            // Skip if subscription was activated within the last 10 minutes
+            // (initial payment is already handled by subscription-callback)
+            if (sub.current_period_start) {
+              const activatedAt = new Date(sub.current_period_start).getTime();
+              const now = Date.now();
+              const tenMinutes = 10 * 60 * 1000;
+              if (now - activatedAt < tenMinutes) {
+                console.log(`PayPal webhook: skipping initial payment for ${subId} (activated ${Math.round((now - activatedAt) / 1000)}s ago)`);
+                break;
+              }
+            }
+
+            // Add credits for renewal
             await db
               .prepare(
                 `UPDATE users SET credits_balance = credits_balance + ?, updated_at = CURRENT_TIMESTAMP

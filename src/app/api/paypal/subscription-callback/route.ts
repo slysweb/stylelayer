@@ -38,6 +38,31 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // Check if already activated (prevent duplicate credits on page refresh)
+    const existing = (await db
+      .prepare(
+        "SELECT status FROM subscriptions WHERE paypal_subscription_id = ?"
+      )
+      .bind(subscriptionId)
+      .first()) as { status: string } | null;
+
+    if (existing?.status === "ACTIVE") {
+      // Already activated — just redirect, don't add credits again
+      return NextResponse.redirect(
+        new URL("/dashboard?subscription=active", request.url)
+      );
+    }
+
+    // Cancel any other active subscriptions for this user (allow only one active plan)
+    await db
+      .prepare(
+        `UPDATE subscriptions
+         SET status = 'CANCELLED', updated_at = CURRENT_TIMESTAMP
+         WHERE user_id = ? AND status = 'ACTIVE' AND paypal_subscription_id != ?`
+      )
+      .bind(userId, subscriptionId)
+      .run();
+
     // Update subscription to ACTIVE
     await db
       .prepare(
