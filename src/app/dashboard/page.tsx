@@ -66,6 +66,25 @@ function formatDate(dateStr: string): string {
   }
 }
 
+/** Map Chinese API prompts to English display labels */
+const PROMPT_DISPLAY_MAP: Record<string, string> = {
+  "提取出图片中的衣服、帽子、鞋子和包，生成一张平铺图，背景为纯白色。": "Full Outfit — clothes, hat, shoes & bag",
+  "提取出图片中的一双鞋子，生成一张正45度图，背景为纯白色。": "Shoes",
+  "提取出图片中的完整的包包和包带，正视图，背景为纯白色。": "Bag & Handbag",
+  "提取出图片中的完整的沙发，生成一张正视图，背景为纯白色。": "Sofa & Furniture",
+  "提取出图片中的日用品，生成一张正视图，背景为纯白色。": "Daily Essentials",
+  "提取出图片中的饰品，生成一张正视图，背景为纯白色。": "Accessories & Jewelry",
+};
+
+function displayPrompt(prompt: string | null): string {
+  if (!prompt) return "—";
+  if (PROMPT_DISPLAY_MAP[prompt]) return PROMPT_DISPLAY_MAP[prompt];
+  // Custom prompts: extract the item name from "提取出图片中的XXX，..."
+  const match = prompt.match(/提取出图片中的(.+?)，/);
+  if (match) return `Custom: ${match[1]}`;
+  return prompt;
+}
+
 function statusBadge(status: string) {
   switch (status) {
     case "COMPLETED":
@@ -281,7 +300,7 @@ export default async function DashboardPage() {
                     </div>
                     {gen.prompt_used && (
                       <p className="mt-2 line-clamp-2 text-xs text-stone-500">
-                        {gen.prompt_used}
+                        {displayPrompt(gen.prompt_used)}
                       </p>
                     )}
                     <p className="mt-2 text-[11px] text-stone-400">
