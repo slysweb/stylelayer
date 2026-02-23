@@ -1,4 +1,4 @@
-import * as content from '../../content'
+import * as content from '../../.velite'
 
 export const blog = content.blog || []
 
