@@ -50,6 +50,12 @@ export function Navigation() {
 
   return (
     <nav className="flex items-center gap-4">
+      <Link
+        href="/blog"
+        className="text-sm font-medium text-stone-600 transition-colors hover:text-stone-900"
+      >
+        Blog
+      </Link>
       {user ? (
         <>
           {credits !== null && (

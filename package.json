@@ -3,10 +3,11 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
+    "dev": "velite && next dev",
+    "build": "velite && next build",
     "start": "next start",
     "lint": "next lint",
+    "velite": "velite",
     "db:migrate": "wrangler d1 migrations apply stylelayer --remote",
     "db:migrate:local": "wrangler d1 migrations apply stylelayer --local",
     "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
@@ -14,6 +15,7 @@
   },
   "dependencies": {
     "@radix-ui/react-slot": "^1.1.0",
+    "@tailwindcss/typography": "^0.5.15",
     "@volcengine/openapi": "^1.35.0",
     "aws4fetch": "^1.0.20",
     "class-variance-authority": "^0.7.0",
@@ -38,6 +40,7 @@
     "tailwindcss": "^3.4.15",
     "tailwindcss-animate": "^1.0.7",
     "typescript": "^5.6.3",
+    "velite": "^0.3.1",
     "wrangler": "^4.59.2"
   }
 }

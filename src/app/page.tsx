@@ -378,6 +378,12 @@ export default async function HomePage() {
                 About
               </Link>
               <Link
+                href="/blog"
+                className="text-sm text-stone-400 transition-colors hover:text-stone-600"
+              >
+                Blog
+              </Link>
+              <Link
                 href="/pricing"
                 className="text-sm text-stone-400 transition-colors hover:text-stone-600"
               >

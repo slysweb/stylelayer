@@ -38,3 +38,7 @@ coverage/
 # Vercel / Cloudflare
 .vercel
 .open-next
+
+# Velite generated content
+content/index.ts
+content/index.d.ts
