@@ -23,5 +23,6 @@ const blog = defineCollection({
 })
 
 export default defineConfig({
+  root: process.cwd(),
   collections: { blog },
 })
