@@ -2,7 +2,7 @@ import { MetadataRoute } from 'next'
 import { posts } from '@/lib/velite'
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://stylelayer.ai'
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://stylelayer.app'
 
   // Main static pages
   const staticPages: MetadataRoute.Sitemap = [
