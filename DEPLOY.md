@@ -12,7 +12,7 @@
 
 | 配置项 | 值 |
 |--------|-----|
-| **Build command** | `npx opennextjs-cloudflare build` |
+| **Build command** | `npm run build && npx opennextjs-cloudflare build` |
 | **Deploy command** | `npx opennextjs-cloudflare deploy` |
 
 或使用 npm scripts：
@@ -22,6 +22,8 @@
 | **Build command** | `npm run deploy` |
 
 （`npm run deploy` 会同时执行 build 和 deploy）
+
+**注意**：确保构建命令包含 `velite` 来生成博客内容。`npm run build` 已经包含了 `velite && next build`。
 
 ## 环境变量
 

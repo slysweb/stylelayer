@@ -16,6 +16,16 @@ const nextConfig: NextConfig = {
       { protocol: "http", hostname: "**", pathname: "/**" },
     ],
   },
+  // Ensure .velite directory is included in the build
+  webpack: (config, { isServer }) => {
+    if (!isServer) {
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        fs: false,
+      };
+    }
+    return config;
+  },
 };
 
 export default nextConfig;
