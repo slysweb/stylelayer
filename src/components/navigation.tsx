@@ -116,88 +116,113 @@ export function Navigation() {
 
   if (loading) {
     return (
-      <div className="h-9 w-9 animate-pulse rounded-full bg-stone-200" />
+      <div className="h-8 w-8 animate-pulse rounded-full bg-stone-200" />
     );
   }
 
-  const navLinks = (mobile: boolean) => (
-    <>
-      <Link
-        href="/blog"
-        className={`text-sm font-medium text-stone-600 transition-colors hover:text-stone-900 ${mobile ? "py-1" : ""}`}
-        onClick={() => setMenuOpen(false)}
+  const avatar = (size: "sm" | "md" = "sm") => {
+    const cls = size === "sm" ? "h-8 w-8" : "h-10 w-10";
+    const textCls = size === "sm" ? "text-xs" : "text-sm";
+    return user?.picture ? (
+      <Image
+        src={user.picture}
+        alt={user.name}
+        width={40}
+        height={40}
+        className={`${cls} rounded-full`}
+      />
+    ) : (
+      <span
+        className={`flex ${cls} items-center justify-center rounded-full bg-stone-200 ${textCls} font-medium text-stone-600`}
       >
-        Blog
-      </Link>
-      {user ? (
-        <>
-          {credits !== null && (
-            <span className="self-start rounded-md bg-stone-100 px-2 py-1 text-sm font-medium text-stone-600">
-              {credits} credits
-            </span>
-          )}
-          <Link
-            href="/dashboard"
-            className={`text-sm font-medium text-stone-600 transition-colors hover:text-stone-900 ${mobile ? "py-1" : ""}`}
-            onClick={() => setMenuOpen(false)}
-          >
-            Dashboard
-          </Link>
-          <Link
-            href="/generate"
-            className={`text-sm font-medium text-stone-600 transition-colors hover:text-stone-900 ${mobile ? "py-1" : ""}`}
-            onClick={() => setMenuOpen(false)}
-          >
-            Generate
-          </Link>
-          <div className={`flex items-center gap-3 ${mobile ? "py-1" : ""}`}>
-            {user.picture ? (
-              <Image
-                src={user.picture}
-                alt={user.name}
-                width={36}
-                height={36}
-                className="h-9 w-9 rounded-full"
-              />
-            ) : (
-              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-stone-200 text-sm font-medium text-stone-600">
-                {user.name?.[0] ?? user.email?.[0] ?? "?"}
-              </span>
-            )}
-            {mobile && (
-              <span className="text-sm text-stone-500">{user.name || user.email}</span>
-            )}
-          </div>
-          <button
-            onClick={async () => {
-              await fetch("/api/auth/signout", { method: "POST", credentials: "include" });
-              window.location.href = "/";
-            }}
-            className={`text-left text-sm font-medium text-stone-600 transition-colors hover:text-stone-900 ${mobile ? "py-1" : ""}`}
-          >
-            Sign out
-          </button>
-        </>
-      ) : (
-        <Link
-          href="/sign-in"
-          className={`rounded-md border border-stone-300 bg-white px-4 py-2 text-center text-sm font-medium text-stone-900 transition-colors hover:bg-stone-50 ${mobile ? "self-start" : ""}`}
-          onClick={() => setMenuOpen(false)}
-        >
-          Sign in
-        </Link>
-      )}
-    </>
-  );
+        {user?.name?.[0] ?? user?.email?.[0] ?? "?"}
+      </span>
+    );
+  };
+
+  const signOutHandler = async () => {
+    await fetch("/api/auth/signout", {
+      method: "POST",
+      credentials: "include",
+    });
+    window.location.href = "/";
+  };
 
   return (
     <>
-      {/* Desktop nav */}
-      <nav className="hidden items-center gap-4 sm:flex">
-        {navLinks(false)}
+      {/* ===== Desktop nav ===== */}
+      <nav className="hidden items-center gap-2 sm:flex">
+        {user ? (
+          <>
+            <Link
+              href="/generate"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-stone-900 px-4 py-2 text-sm font-medium text-white shadow-sm transition-all hover:bg-stone-800 hover:shadow-md"
+            >
+              <svg
+                className="h-4 w-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth={2}
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456z"
+                />
+              </svg>
+              Generate
+            </Link>
+
+            <Link
+              href="/dashboard"
+              className="rounded-md px-3 py-1.5 text-sm font-medium text-stone-600 transition-colors hover:text-stone-900"
+            >
+              Dashboard
+            </Link>
+            <Link
+              href="/blog"
+              className="rounded-md px-3 py-1.5 text-sm font-medium text-stone-600 transition-colors hover:text-stone-900"
+            >
+              Blog
+            </Link>
+
+            <div className="ml-1 h-5 w-px bg-stone-200" />
+
+            {credits !== null && (
+              <span className="rounded-md bg-stone-100 px-2.5 py-1 text-xs font-medium text-stone-500">
+                {credits} credits
+              </span>
+            )}
+
+            <button
+              onClick={signOutHandler}
+              className="rounded-md px-2 py-1.5 text-xs font-medium text-stone-400 transition-colors hover:text-stone-700"
+            >
+              Sign out
+            </button>
+
+            {avatar("sm")}
+          </>
+        ) : (
+          <>
+          <Link
+            href="/blog"
+            className="rounded-md px-3 py-1.5 text-sm font-medium text-stone-600 transition-colors hover:text-stone-900"
+          >
+            Blog
+          </Link>
+          <Link
+            href="/sign-in"
+            className="rounded-md border border-stone-300 bg-white px-4 py-2 text-sm font-medium text-stone-900 transition-colors hover:bg-stone-50"
+          >
+            Sign in
+          </Link>
+          </>
+        )}
       </nav>
 
-      {/* Mobile hamburger button */}
+      {/* ===== Mobile hamburger button ===== */}
       <button
         className="flex h-9 w-9 items-center justify-center rounded-md text-stone-600 transition-colors hover:bg-stone-100 hover:text-stone-900 sm:hidden"
         onClick={() => setMenuOpen(true)}
@@ -218,9 +243,91 @@ export function Navigation() {
         </svg>
       </button>
 
-      {/* Mobile menu - rendered via portal to escape header's backdrop-filter containing block */}
+      {/* ===== Mobile menu ===== */}
       <MobileMenu open={menuOpen} onClose={() => setMenuOpen(false)}>
-        {navLinks(true)}
+        {user ? (
+          <>
+            {/* User info */}
+            <div className="flex items-center gap-3 border-b border-stone-100 pb-5">
+              {avatar("md")}
+              <div className="min-w-0">
+                <p className="truncate text-sm font-semibold text-stone-900">
+                  {user.name}
+                </p>
+                <p className="truncate text-xs text-stone-400">{user.email}</p>
+              </div>
+            </div>
+
+            {credits !== null && (
+              <span className="self-start rounded-md bg-stone-100 px-2.5 py-1 text-xs font-medium text-stone-500">
+                {credits} credits
+              </span>
+            )}
+
+            {/* Generate CTA */}
+            <Link
+              href="/generate"
+              className="inline-flex items-center justify-center gap-2 rounded-lg bg-stone-900 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-all hover:bg-stone-800"
+              onClick={() => setMenuOpen(false)}
+            >
+              <svg
+                className="h-4 w-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth={2}
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456z"
+                />
+              </svg>
+              Generate
+            </Link>
+
+            <Link
+              href="/dashboard"
+              className="py-1 text-sm font-medium text-stone-600 transition-colors hover:text-stone-900"
+              onClick={() => setMenuOpen(false)}
+            >
+              Dashboard
+            </Link>
+            <Link
+              href="/blog"
+              className="py-1 text-sm font-medium text-stone-600 transition-colors hover:text-stone-900"
+              onClick={() => setMenuOpen(false)}
+            >
+              Blog
+            </Link>
+
+            <div className="mt-auto border-t border-stone-100 pb-8 pt-4">
+              <button
+                onClick={signOutHandler}
+                className="text-sm font-medium text-stone-400 transition-colors hover:text-stone-700"
+              >
+                Sign out
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            <Link
+              href="/sign-in"
+              className="inline-flex items-center justify-center rounded-lg bg-stone-900 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-all hover:bg-stone-800"
+              onClick={() => setMenuOpen(false)}
+            >
+              Sign in
+            </Link>
+            <Link
+              href="/blog"
+              className="py-1 text-sm font-medium text-stone-600 transition-colors hover:text-stone-900"
+              onClick={() => setMenuOpen(false)}
+            >
+              Blog
+            </Link>
+          </>
+        )}
       </MobileMenu>
     </>
   );

@@ -37,10 +37,10 @@ async function getUserGenerations(
   const db = await getDb();
   if (!db) return { rows: [], total: 0 };
 
-  const countResult = await db
+  const countResult = (await db
     .prepare("SELECT COUNT(*) as cnt FROM generations WHERE user_id = ?")
     .bind(googleId)
-    .first<{ cnt: number }>();
+    .first()) as { cnt: number } | null;
   const total = countResult?.cnt ?? 0;
 
   const offset = (page - 1) * GEN_PAGE_SIZE;
@@ -60,12 +60,12 @@ async function getGenerationStats(
   const db = await getDb();
   if (!db) return { completedCount: 0, totalSpent: 0 };
 
-  const result = await db
+  const result = (await db
     .prepare(
       "SELECT COUNT(*) as cnt, COALESCE(SUM(credits_spent), 0) as spent FROM generations WHERE user_id = ? AND status = 'COMPLETED'"
     )
     .bind(googleId)
-    .first<{ cnt: number; spent: number }>();
+    .first()) as { cnt: number; spent: number } | null;
 
   return {
     completedCount: result?.cnt ?? 0,
@@ -80,10 +80,10 @@ async function getUserCreditLogs(
   const db = await getDb();
   if (!db) return { rows: [], total: 0 };
 
-  const countResult = await db
+  const countResult = (await db
     .prepare("SELECT COUNT(*) as cnt FROM credit_logs WHERE user_id = ?")
     .bind(googleId)
-    .first<{ cnt: number }>();
+    .first()) as { cnt: number } | null;
   const total = countResult?.cnt ?? 0;
 
   const offset = (page - 1) * CREDIT_PAGE_SIZE;
