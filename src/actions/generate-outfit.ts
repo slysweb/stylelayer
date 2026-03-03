@@ -9,6 +9,7 @@ import {
   completeGeneration,
   failAndRefundGeneration,
 } from "@/lib/generations";
+import { uploadImageToR2FromUrl, uploadBase64ToR2 } from "@/lib/s3";
 
 const JIMENG_ACCESS_KEY = process.env.JIMENG_ACCESS_KEY ?? process.env.VOLC_ACCESSKEY;
 const JIMENG_SECRET_KEY = process.env.JIMENG_SECRET_KEY ?? process.env.VOLC_SECRETKEY;
@@ -228,12 +229,20 @@ async function pollJimengTask(taskId: string): Promise<GenerateResult> {
     if (status === "done") {
       const urls = data.data?.image_urls;
       if (urls?.[0]) {
+        const r2Url = await uploadImageToR2FromUrl(urls[0]);
+        if (r2Url) {
+          return { ok: true, imageUrl: r2Url };
+        }
         return { ok: true, imageUrl: urls[0] };
       }
       const b64 = data.data?.binary_data_base64?.[0];
       if (b64) {
         if (b64.length > 8 * 1024 * 1024) {
           return { ok: false, error: "Generated image too large, please try again" };
+        }
+        const r2Url = await uploadBase64ToR2(b64);
+        if (r2Url) {
+          return { ok: true, imageUrl: r2Url };
         }
         return { ok: true, imageUrl: `data:image/png;base64,${b64}` };
       }
