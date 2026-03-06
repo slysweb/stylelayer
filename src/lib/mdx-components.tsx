@@ -1,7 +1,42 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useMemo, useEffect } from 'react'
 import * as React from 'react'
+
+// Helper function to generate ID from text
+function generateId(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '')
+}
+
+// Custom heading components with IDs
+const Heading2 = ({ children, ...props }: React.HTMLAttributes<HTMLHeadingElement>) => {
+  const id = useMemo(() => {
+    const text = typeof children === 'string' ? children : React.Children.toArray(children).join('')
+    return generateId(text)
+  }, [children])
+
+  return (
+    <h2 id={id} {...props}>
+      {children}
+    </h2>
+  )
+}
+
+const Heading3 = ({ children, ...props }: React.HTMLAttributes<HTMLHeadingElement>) => {
+  const id = useMemo(() => {
+    const text = typeof children === 'string' ? children : React.Children.toArray(children).join('')
+    return generateId(text)
+  }, [children])
+
+  return (
+    <h3 id={id} {...props}>
+      {children}
+    </h3>
+  )
+}
 
 export function MDXContent({ code }: { code: any }) {
   // Velite generates MDX content as a string containing compiled code
@@ -52,9 +87,26 @@ export function MDXContent({ code }: { code: any }) {
     return null
   }, [code])
   
+  // Add IDs to headings after render
+  useEffect(() => {
+    const headings = document.querySelectorAll('article h2, article h3')
+    headings.forEach((heading) => {
+      if (!heading.id) {
+        const text = heading.textContent || ''
+        heading.id = generateId(text)
+      }
+    })
+  }, [Component])
+  
   if (!Component || typeof Component !== 'function') {
     return <div>Error loading content</div>
   }
   
-  return <Component />
+  // Custom components for headings
+  const components = {
+    h2: Heading2,
+    h3: Heading3,
+  }
+  
+  return <Component components={components} />
 }

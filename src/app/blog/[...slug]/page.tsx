@@ -5,6 +5,7 @@ import { allPosts } from "@/lib/velite";
 import { Navigation } from "@/components/navigation";
 import type { Metadata } from "next";
 import { MDXContent } from "@/lib/mdx-components";
+import { TableOfContentsWrapper } from "@/components/table-of-contents-wrapper";
 
 type Props = {
   params: Promise<{ slug: string[] }>;
@@ -71,91 +72,101 @@ export default async function BlogPostPage({ params }: Props) {
       </header>
 
       {/* Blog Post Content */}
-      <article className="mx-auto max-w-4xl px-4 py-12 sm:px-6 sm:py-16 lg:px-8">
-        {/* Back link */}
-        <Link
-          href="/blog"
-          className="mb-8 inline-flex items-center text-sm font-medium text-stone-600 transition-colors hover:text-stone-900"
-        >
-          <svg
-            className="mr-2 h-4 w-4"
-            fill="none"
-            viewBox="0 0 24 24"
-            strokeWidth={2}
-            stroke="currentColor"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18"
-            />
-          </svg>
-          Back to Blog
-        </Link>
-
-        {/* Post Header */}
-        <header className="mb-8">
-          <div className="mb-4 flex items-center gap-3 text-sm text-stone-500">
-            <span className="rounded-full bg-stone-100 px-3 py-1 font-medium text-stone-700">
-              {post.category}
-            </span>
-            <time dateTime={post.date}>
-              {new Date(post.date).toLocaleDateString("en-US", {
-                year: "numeric",
-                month: "long",
-                day: "numeric",
-              })}
-            </time>
-          </div>
-          <h1 className="font-serif text-4xl font-semibold tracking-tight sm:text-5xl">
-            {post.title}
-          </h1>
-          {post.description && (
-            <p className="mt-4 text-xl text-stone-500">{post.description}</p>
-          )}
-        </header>
-
-        {/* Cover Image */}
-        {post.image && (
-          <div className="relative mb-12 aspect-video overflow-hidden rounded-2xl border border-stone-200 bg-stone-100">
-            <Image
-              src={post.image}
-              alt={post.title}
-              fill
-              className="object-cover"
-              priority
-            />
-          </div>
-        )}
-
-        {/* Post Body with MDXContent */}
-        <div className="prose prose-neutral dark:prose-invert lg:prose-xl max-w-none">
-          <MDXContent code={post.body} />
-        </div>
-
-        {/* Footer */}
-        <div className="mt-12 border-t border-stone-200 pt-8">
-          <Link
-            href="/blog"
-            className="inline-flex items-center text-sm font-medium text-stone-600 transition-colors hover:text-stone-900"
-          >
-            <svg
-              className="mr-2 h-4 w-4"
-              fill="none"
-              viewBox="0 0 24 24"
-              strokeWidth={2}
-              stroke="currentColor"
+      <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 sm:py-16 lg:px-8">
+        <div className="flex gap-12">
+          {/* Main Content */}
+          <article className="flex-1 min-w-0 max-w-4xl">
+            {/* Back link */}
+            <Link
+              href="/blog"
+              className="mb-8 inline-flex items-center text-sm font-medium text-stone-600 transition-colors hover:text-stone-900"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18"
-              />
-            </svg>
-            Back to Blog
-          </Link>
+              <svg
+                className="mr-2 h-4 w-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth={2}
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18"
+                />
+              </svg>
+              Back to Blog
+            </Link>
+
+            {/* Post Header */}
+            <header className="mb-8">
+              <div className="mb-4 flex items-center gap-3 text-sm text-stone-500">
+                <span className="rounded-full bg-stone-100 px-3 py-1 font-medium text-stone-700">
+                  {post.category}
+                </span>
+                <time dateTime={post.date}>
+                  {new Date(post.date).toLocaleDateString("en-US", {
+                    year: "numeric",
+                    month: "long",
+                    day: "numeric",
+                  })}
+                </time>
+              </div>
+              <h1 className="font-serif text-4xl font-semibold tracking-tight sm:text-5xl">
+                {post.title}
+              </h1>
+              {post.description && (
+                <p className="mt-4 text-xl text-stone-500">{post.description}</p>
+              )}
+            </header>
+
+            {/* Cover Image */}
+            {post.image && (
+              <div className="relative mb-12 aspect-video overflow-hidden rounded-2xl border border-stone-200 bg-stone-100">
+                <Image
+                  src={post.image}
+                  alt={post.title}
+                  fill
+                  className="object-cover"
+                  priority
+                />
+              </div>
+            )}
+
+            {/* Post Body with MDXContent */}
+            <div className="prose prose-neutral dark:prose-invert lg:prose-xl max-w-none">
+              <MDXContent code={post.body} />
+            </div>
+
+            {/* Footer */}
+            <div className="mt-12 border-t border-stone-200 pt-8">
+              <Link
+                href="/blog"
+                className="inline-flex items-center text-sm font-medium text-stone-600 transition-colors hover:text-stone-900"
+              >
+                <svg
+                  className="mr-2 h-4 w-4"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  strokeWidth={2}
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18"
+                  />
+                </svg>
+                Back to Blog
+              </Link>
+            </div>
+          </article>
+
+          {/* Table of Contents Sidebar */}
+          <aside className="hidden lg:block w-64 flex-shrink-0">
+            <TableOfContentsWrapper />
+          </aside>
         </div>
-      </article>
+      </div>
 
       {/* Footer */}
       <footer className="border-t border-stone-200/80 bg-white">
