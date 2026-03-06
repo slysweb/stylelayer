@@ -402,6 +402,33 @@ export default async function HomePage() {
                 Terms of Service
               </Link>
             </nav>
+            <div className="flex flex-wrap items-center justify-center gap-4 sm:justify-end">
+              <span className="text-sm text-stone-400">Follow us</span>
+              <a
+                href="https://www.pinterest.com/stylelayerapp/"
+                target="_blank"
+                rel="noreferrer"
+                className="text-sm text-stone-400 transition-colors hover:text-stone-600"
+              >
+                Pinterest
+              </a>
+              <a
+                href="https://www.youtube.com/@stylelayerapp"
+                target="_blank"
+                rel="noreferrer"
+                className="text-sm text-stone-400 transition-colors hover:text-stone-600"
+              >
+                YouTube
+              </a>
+              <a
+                href="https://www.facebook.com/stylelayerapp/"
+                target="_blank"
+                rel="noreferrer"
+                className="text-sm text-stone-400 transition-colors hover:text-stone-600"
+              >
+                Facebook
+              </a>
+            </div>
           </div>
           <div className="mt-6 border-t border-stone-200/60 pt-6 text-center">
             <p className="text-sm text-stone-400">

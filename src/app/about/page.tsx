@@ -164,9 +164,38 @@ export default function AboutPage() {
 
       <footer className="border-t border-stone-200/80">
         <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
-          <p className="text-center text-sm text-stone-400">
-            &copy; {new Date().getFullYear()} StyleLayer. All rights reserved.
-          </p>
+          <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-between">
+            <p className="text-center text-sm text-stone-400 sm:text-left">
+              &copy; {new Date().getFullYear()} StyleLayer. All rights reserved.
+            </p>
+            <div className="flex flex-wrap items-center justify-center gap-4 sm:justify-end">
+              <span className="text-sm text-stone-400">Follow us</span>
+              <a
+                href="https://www.pinterest.com/stylelayerapp/"
+                target="_blank"
+                rel="noreferrer"
+                className="text-sm text-stone-400 transition-colors hover:text-stone-600"
+              >
+                Pinterest
+              </a>
+              <a
+                href="https://www.youtube.com/@stylelayerapp"
+                target="_blank"
+                rel="noreferrer"
+                className="text-sm text-stone-400 transition-colors hover:text-stone-600"
+              >
+                YouTube
+              </a>
+              <a
+                href="https://www.facebook.com/stylelayerapp/"
+                target="_blank"
+                rel="noreferrer"
+                className="text-sm text-stone-400 transition-colors hover:text-stone-600"
+              >
+                Facebook
+              </a>
+            </div>
+          </div>
         </div>
       </footer>
     </div>
